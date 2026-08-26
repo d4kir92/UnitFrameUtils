@@ -3,9 +3,18 @@ local MEDIA = "Interface\\AddOns\\UnitFrameUtils\\media\\"
 local FLAG_SIZE = 32
 local FLAG_CROP = 43 / 64
 local INSPECT_DELAY = 2
+local LEADER_ATLAS = "UI-HUD-UnitFrame-Player-Group-LeaderIcon"
+local LEADER_TEXTURE = "Interface\\GroupFrame\\UI-Group-LeaderIcon"
+local LEADER_SIZE = 16
+local LEADER_OFFSET = -4
+local RAIDICON_TEXTURE = "Interface\\TargetingFrame\\UI-RaidTargetingIcons"
+local RAIDICON_SIZE = 16
+local RAIDICON_OFFSET = 2
 local flagPoint = "TOPRIGHT"
 local flagOffset = 2
 local flagScale = 0.7
+local raidFlagOffset = 2
+local raidFlagScale = 0.7
 local options = {
     ["SHOWFLAG"] = true,
     ["FLAGHIDECOMBAT"] = true,
@@ -15,7 +24,10 @@ local options = {
     ["ILVLHIDEINSTANCE"] = true,
     ["SHOWMYTHICRATING"] = true,
     ["RATINGHIDECOMBAT"] = true,
-    ["RATINGHIDEINSTANCE"] = true
+    ["RATINGHIDEINSTANCE"] = true,
+    ["SHOWLEADER"] = true,
+    ["SHOWRAIDICON"] = true,
+    ["RAIDICONHIDECOMBAT"] = false
 }
 
 local overlays = {}
@@ -34,8 +46,8 @@ end
 
 local function IsFeatureVisible(showKey, combatKey, instanceKey)
     if not options[showKey] then return false end
-    if options[combatKey] and InCombatLockdown() then return false end
-    if options[instanceKey] and IsInInstance() then return false end
+    if combatKey and options[combatKey] and InCombatLockdown() then return false end
+    if instanceKey and options[instanceKey] and IsInInstance() then return false end
 
     return true
 end
@@ -50,6 +62,24 @@ end
 
 local function IsRatingVisible()
     return IsFeatureVisible("SHOWMYTHICRATING", "RATINGHIDECOMBAT", "RATINGHIDEINSTANCE")
+end
+
+local function IsLeaderVisible()
+    return options["SHOWLEADER"] == true
+end
+
+local function IsRaidIconVisible()
+    return IsFeatureVisible("SHOWRAIDICON", "RAIDICONHIDECOMBAT", nil)
+end
+
+local function ApplyLeaderTexture(icon)
+    if icon.SetAtlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(LEADER_ATLAS) then
+        icon:SetAtlas(LEADER_ATLAS)
+
+        return
+    end
+
+    icon:SetTexture(LEADER_TEXTURE)
 end
 
 local function GetUnit(frame)
@@ -187,8 +217,35 @@ local function UpdateInfo(frame)
     end
 end
 
+local function UpdateLeader(frame)
+    local overlay = overlays[frame]
+    if overlay == nil then return end
+    local unit = GetUnit(frame)
+    if unit and IsLeaderVisible() and UnitIsGroupLeader(unit) then
+        overlay.leader:Show()
+    else
+        overlay.leader:Hide()
+    end
+end
+
+local function UpdateRaidIcon(frame)
+    local overlay = overlays[frame]
+    if overlay == nil then return end
+    local unit = GetUnit(frame)
+    local index = nil
+    if unit and IsRaidIconVisible() then index = GetRaidTargetIndex(unit) end
+    if index and SetRaidTargetIconTexture then
+        SetRaidTargetIconTexture(overlay.raidIcon, index)
+        overlay.raidIcon:Show()
+    else
+        overlay.raidIcon:Hide()
+    end
+end
+
 local function UpdateFrame(frame)
     UpdateFlag(frame)
+    UpdateRaidIcon(frame)
+    UpdateLeader(frame)
     UpdateInfo(frame)
 end
 
@@ -245,13 +302,29 @@ local function AddOverlay(frame)
     icon:SetScale(1)
     ApplyFlagSize(icon)
     ApplyFlagPosition(icon, frame)
+    local raidIcon = frame:CreateTexture(name .. ".UFU_RaidIcon", "OVERLAY")
+    raidIcon:SetDrawLayer("OVERLAY", 7)
+    raidIcon:SetSize(RAIDICON_SIZE, RAIDICON_SIZE)
+    raidIcon:SetPoint("TOP", frame, "TOP", 0, -RAIDICON_OFFSET)
+    raidIcon:SetTexture(RAIDICON_TEXTURE)
+    raidIcon:Hide()
+    local leader = frame:CreateTexture(name .. ".UFU_Leader", "OVERLAY")
+    leader:SetDrawLayer("OVERLAY", 7)
+    leader:SetSize(LEADER_SIZE, LEADER_SIZE)
+    leader:SetPoint("BOTTOM", raidIcon, "TOP", 0, LEADER_OFFSET)
+    ApplyLeaderTexture(leader)
+    leader:Hide()
     local info = frame:CreateFontString(name .. ".UFU_Info", "OVERLAY", "GameFontHighlightSmall")
     info:SetDrawLayer("OVERLAY", 7)
     info:SetPoint("BOTTOM", frame, "BOTTOM", 0, 2)
     info:SetJustifyH("CENTER")
-    UnitFrameUtils:SetFontSize(info, 10, "THINOUTLINE")
+    UnitFrameUtils:SetFontSize(info, 10, "")
+    info:SetShadowColor(0, 0, 0, 1)
+    info:SetShadowOffset(1, -1)
     overlays[frame] = {
         ["flag"] = icon,
+        ["raidIcon"] = raidIcon,
+        ["leader"] = leader,
         ["info"] = info
     }
 
@@ -318,6 +391,8 @@ end
 local eventFrame = CreateFrame("Frame")
 UnitFrameUtils:RegisterEvent(eventFrame, "PLAYER_ENTERING_WORLD")
 UnitFrameUtils:RegisterEvent(eventFrame, "GROUP_ROSTER_UPDATE")
+UnitFrameUtils:RegisterEvent(eventFrame, "PARTY_LEADER_CHANGED")
+UnitFrameUtils:RegisterEvent(eventFrame, "RAID_TARGET_UPDATE")
 UnitFrameUtils:RegisterEvent(eventFrame, "PLAYER_REGEN_ENABLED")
 UnitFrameUtils:RegisterEvent(eventFrame, "PLAYER_REGEN_DISABLED")
 UnitFrameUtils:RegisterEvent(eventFrame, "ZONE_CHANGED_NEW_AREA")

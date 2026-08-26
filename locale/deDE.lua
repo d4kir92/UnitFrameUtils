@@ -1,5 +1,9 @@
 local _, UnitFrameUtils = ...
 UnitFrameUtils:AddTrans("deDE", "LID_GENERAL", "Allgemein")
+UnitFrameUtils:AddTrans("deDE", "LID_RAIDICON", "Schlachtzugssymbol")
+UnitFrameUtils:AddTrans("deDE", "LID_SHOWRAIDICON", "Schlachtzugssymbol anzeigen")
+UnitFrameUtils:AddTrans("deDE", "LID_LEADER", "Gruppenanführer")
+UnitFrameUtils:AddTrans("deDE", "LID_SHOWLEADER", "Anführerkrone anzeigen")
 UnitFrameUtils:AddTrans("deDE", "LID_MYTHICRATING", "Mythisch+ Wertung")
 UnitFrameUtils:AddTrans("deDE", "LID_ITEMLEVEL", "Gegenstandsstufe")
 UnitFrameUtils:AddTrans("deDE", "LID_FLAG", "Realmflagge")

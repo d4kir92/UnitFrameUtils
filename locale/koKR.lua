@@ -1,5 +1,9 @@
 local _, UnitFrameUtils = ...
 UnitFrameUtils:AddTrans("koKR", "LID_GENERAL", "일반")
+UnitFrameUtils:AddTrans("koKR", "LID_RAIDICON", "공격 표시")
+UnitFrameUtils:AddTrans("koKR", "LID_SHOWRAIDICON", "공격 표시 보이기")
+UnitFrameUtils:AddTrans("koKR", "LID_LEADER", "파티 지도자")
+UnitFrameUtils:AddTrans("koKR", "LID_SHOWLEADER", "지도자 왕관 표시")
 UnitFrameUtils:AddTrans("koKR", "LID_MYTHICRATING", "쐐기돌 점수")
 UnitFrameUtils:AddTrans("koKR", "LID_ITEMLEVEL", "아이템 레벨")
 UnitFrameUtils:AddTrans("koKR", "LID_FLAG", "서버 깃발")

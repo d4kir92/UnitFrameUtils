@@ -77,7 +77,7 @@ function UI.WindowMixin:AddDropdown(tab)
     end
 
     if not Apply(tab.value) and choices[1] then Apply(choices[1].value) end
-    UI:Add(win, holder, UI.ROW, text)
+    UI:Add(win, holder, UI.ROW, text, true)
 
     return holder
 end

@@ -33,12 +33,13 @@ function UI:ApplyWindow(win)
     end
 end
 
-function UI:Add(win, frame, height, label)
+function UI:Add(win, frame, height, label, stretch)
     local element = {
         ["frame"] = frame,
         ["height"] = height or UI.ROW,
         ["label"] = string.lower(label or ""),
         ["filter"] = win.search ~= nil,
+        ["stretch"] = stretch == true,
         ["category"] = win.category,
         ["isCategory"] = false,
         ["collapsed"] = false,
@@ -74,6 +75,7 @@ function UI.WindowMixin:Layout()
         if self:IsElementVisible(element) then
             local x = UI.PADDING
             if element.category then x = x + UI.INDENT end
+            if element.stretch then element.frame:SetWidth(math.max(1, self.contentWidth - x - UI.PADDING)) end
             element.frame:ClearAllPoints()
             element.frame:SetPoint("TOPLEFT", self.content, "TOPLEFT", x, y)
             element.frame:Show()
@@ -83,6 +85,7 @@ function UI.WindowMixin:Layout()
         end
     end
 
+    if self.scroll then self.content:SetWidth(self.contentWidth) end
     self.content:SetHeight(math.max(1, -y + UI.PADDING))
     self:UpdateScroll()
 end

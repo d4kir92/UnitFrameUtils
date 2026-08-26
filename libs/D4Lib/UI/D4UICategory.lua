@@ -21,7 +21,7 @@ function UI.WindowMixin:AddCategory(tab)
     highlight:SetAllPoints(header)
     UI:SetSolidColor(highlight, 1, 1, 1, 0.1)
     win.category = nil
-    local element = UI:Add(win, header, UI.ROW, text)
+    local element = UI:Add(win, header, UI.ROW, text, true)
     element.isCategory = true
     element.collapsed = tab.collapsed == true
     win.category = element

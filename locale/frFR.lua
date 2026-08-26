@@ -1,5 +1,9 @@
 local _, UnitFrameUtils = ...
 UnitFrameUtils:AddTrans("frFR", "LID_GENERAL", "Général")
+UnitFrameUtils:AddTrans("frFR", "LID_RAIDICON", "Symbole de cible")
+UnitFrameUtils:AddTrans("frFR", "LID_SHOWRAIDICON", "Afficher le symbole de cible")
+UnitFrameUtils:AddTrans("frFR", "LID_LEADER", "Chef de groupe")
+UnitFrameUtils:AddTrans("frFR", "LID_SHOWLEADER", "Afficher la couronne du chef")
 UnitFrameUtils:AddTrans("frFR", "LID_MYTHICRATING", "Cote Mythique+")
 UnitFrameUtils:AddTrans("frFR", "LID_ITEMLEVEL", "Niveau d'objet")
 UnitFrameUtils:AddTrans("frFR", "LID_FLAG", "Drapeau du royaume")

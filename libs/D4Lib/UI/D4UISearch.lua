@@ -35,7 +35,7 @@ function UI.WindowMixin:AddSearch(tab)
     )
 
     box:SetScript("OnEnterPressed", function(sel) sel:ClearFocus() end)
-    UI:Add(win, box, UI.ROW, "")
+    UI:Add(win, box, UI.ROW, "", true)
     win.search = box
 
     return box

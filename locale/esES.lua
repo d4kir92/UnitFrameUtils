@@ -1,5 +1,9 @@
 local _, UnitFrameUtils = ...
 UnitFrameUtils:AddTrans("esES", "LID_GENERAL", "General")
+UnitFrameUtils:AddTrans("esES", "LID_RAIDICON", "Icono de objetivo")
+UnitFrameUtils:AddTrans("esES", "LID_SHOWRAIDICON", "Mostrar icono de objetivo")
+UnitFrameUtils:AddTrans("esES", "LID_LEADER", "Líder del grupo")
+UnitFrameUtils:AddTrans("esES", "LID_SHOWLEADER", "Mostrar corona de líder")
 UnitFrameUtils:AddTrans("esES", "LID_MYTHICRATING", "Puntuación de Mítica+")
 UnitFrameUtils:AddTrans("esES", "LID_ITEMLEVEL", "Nivel de objeto")
 UnitFrameUtils:AddTrans("esES", "LID_FLAG", "Bandera del reino")

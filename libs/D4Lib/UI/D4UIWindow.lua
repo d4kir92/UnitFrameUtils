@@ -13,7 +13,7 @@ end
 local function CreateModernScroll(win, name)
     local scrollBox = CreateFrame("Frame", name .. "ScrollBox", win, "WowScrollBox")
     scrollBox:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -32)
-    scrollBox:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -28, 12)
+    scrollBox:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -28, 22)
     local scrollBar = CreateFrame("EventFrame", name .. "ScrollBar", win, "MinimalScrollBar")
     scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 6, 0)
     scrollBar:SetPoint("BOTTOMLEFT", scrollBox, "BOTTOMRIGHT", 6, 0)
@@ -29,6 +29,42 @@ local function CreateModernScroll(win, name)
     return content
 end
 
+local function MakeResizable(win, name, tab)
+    win:SetResizable(true)
+    local minWidth = tab.minWidth or 300
+    local minHeight = tab.minHeight or 200
+    if win.SetResizeBounds then
+        win:SetResizeBounds(minWidth, minHeight)
+    elseif win.SetMinResize then
+        win:SetMinResize(minWidth, minHeight)
+    end
+
+    local grip = CreateFrame("Button", name .. "Resize", win)
+    grip:SetSize(16, 16)
+    grip:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -4, 4)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+    grip:SetScript("OnMouseDown", function() win:StartSizing("BOTTOMRIGHT") end)
+    grip:SetScript(
+        "OnMouseUp",
+        function()
+            win:StopMovingOrSizing()
+            if tab.onResize then tab.onResize(math.floor(win:GetWidth() + 0.5), math.floor(win:GetHeight() + 0.5)) end
+        end
+    )
+
+    win:SetScript(
+        "OnSizeChanged",
+        function(sel, width)
+            sel.contentWidth = width - 56
+            sel:Layout()
+        end
+    )
+
+    win.grip = grip
+end
+
 local function CreateLegacyScroll(win, name)
     local scroll = nil
     if D4:CheckTemplates("UIPanelScrollFrameTemplate") then
@@ -38,7 +74,7 @@ local function CreateLegacyScroll(win, name)
     end
 
     scroll:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -32)
-    scroll:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -32, 12)
+    scroll:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -32, 22)
     local content = CreateFrame("Frame", name .. "Content", scroll)
     content:SetSize(win.contentWidth, 1)
     scroll:SetScrollChild(content)
@@ -77,6 +113,7 @@ function D4:CreateUIWindow(tab)
     win.category = nil
     win.searching = false
     UI:ApplyWindow(win)
+    if tab.resizable ~= false then MakeResizable(win, name, tab) end
     win:HookScript("OnHide", function() UI:CloseDropdowns() end)
     win:Hide()
 

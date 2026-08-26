@@ -1,5 +1,9 @@
 local _, UnitFrameUtils = ...
 UnitFrameUtils:AddTrans("zhTW", "LID_GENERAL", "一般")
+UnitFrameUtils:AddTrans("zhTW", "LID_RAIDICON", "團隊標記")
+UnitFrameUtils:AddTrans("zhTW", "LID_SHOWRAIDICON", "顯示團隊標記")
+UnitFrameUtils:AddTrans("zhTW", "LID_LEADER", "隊長")
+UnitFrameUtils:AddTrans("zhTW", "LID_SHOWLEADER", "顯示隊長皇冠")
 UnitFrameUtils:AddTrans("zhTW", "LID_MYTHICRATING", "傳奇鑰石評分")
 UnitFrameUtils:AddTrans("zhTW", "LID_ITEMLEVEL", "裝備等級")
 UnitFrameUtils:AddTrans("zhTW", "LID_FLAG", "伺服器旗幟")

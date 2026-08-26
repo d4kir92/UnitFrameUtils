@@ -3,7 +3,22 @@ local ICON = 135994
 local DEFAULT_SCALE = 0.7
 local DEFAULT_OFFSET = 2
 local settings = nil
-local toggles = {"SHOWFLAG", "FLAGHIDECOMBAT", "FLAGHIDEINSTANCE", "SHOWITEMLEVEL", "ILVLHIDECOMBAT", "ILVLHIDEINSTANCE", "SHOWMYTHICRATING", "RATINGHIDECOMBAT", "RATINGHIDEINSTANCE"}
+local DEFAULT_WIDTH = 460
+local DEFAULT_HEIGHT = 520
+local defaults = {
+    ["SHOWFLAG"] = true,
+    ["FLAGHIDECOMBAT"] = true,
+    ["FLAGHIDEINSTANCE"] = true,
+    ["SHOWITEMLEVEL"] = true,
+    ["ILVLHIDECOMBAT"] = true,
+    ["ILVLHIDEINSTANCE"] = true,
+    ["SHOWMYTHICRATING"] = true,
+    ["RATINGHIDECOMBAT"] = true,
+    ["RATINGHIDEINSTANCE"] = true,
+    ["SHOWLEADER"] = true,
+    ["SHOWRAIDICON"] = true,
+    ["RAIDICONHIDECOMBAT"] = false
+}
 
 local function GetTocVersion()
     if C_AddOns and C_AddOns.GetAddOnMetadata then return C_AddOns.GetAddOnMetadata("UnitFrameUtils", "Version") end
@@ -17,8 +32,8 @@ local function ShowMinimapButtonDefault()
 end
 
 local function ApplySettings()
-    for _, key in ipairs(toggles) do
-        UnitFrameUtils:SetOption(key, UnitFrameUtils:GV(UnitFrameUtilsDB, key, true))
+    for key, default in pairs(defaults) do
+        UnitFrameUtils:SetOption(key, UnitFrameUtils:GV(UnitFrameUtilsDB, key, default))
     end
 
     UnitFrameUtils:SetRealmFlagScale(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE", DEFAULT_SCALE))
@@ -29,7 +44,7 @@ local function AddToggle(label, key)
     settings:AddCheckbox(
         {
             ["label"] = label,
-            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, key, true),
+            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, key, defaults[key]),
             ["func"] = function(value)
                 UnitFrameUtils:SV(UnitFrameUtilsDB, key, value)
                 UnitFrameUtils:SetOption(key, value)
@@ -47,8 +62,14 @@ function UnitFrameUtils:InitSettings()
         {
             ["name"] = "UnitFrameUtilsSettings",
             ["pTab"] = {"CENTER"},
-            ["width"] = 460,
-            ["height"] = 520,
+            ["width"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "WINDOWWIDTH", DEFAULT_WIDTH),
+            ["height"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "WINDOWHEIGHT", DEFAULT_HEIGHT),
+            ["minWidth"] = 360,
+            ["minHeight"] = 240,
+            ["onResize"] = function(width, height)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, "WINDOWWIDTH", width)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, "WINDOWHEIGHT", height)
+            end,
             ["title"] = format("UnitFrameUtils v%s", GetTocVersion())
         }
     )
@@ -70,6 +91,11 @@ function UnitFrameUtils:InitSettings()
         }
     )
 
+    settings:AddCategory({["label"] = "LID_RAIDICON"})
+    AddToggle("LID_SHOWRAIDICON", "SHOWRAIDICON")
+    AddToggle("LID_HIDEINCOMBAT", "RAIDICONHIDECOMBAT")
+    settings:AddCategory({["label"] = "LID_LEADER"})
+    AddToggle("LID_SHOWLEADER", "SHOWLEADER")
     settings:AddCategory({["label"] = "LID_MYTHICRATING"})
     AddToggle("LID_SHOWMYTHICRATING", "SHOWMYTHICRATING")
     AddToggle("LID_HIDEINCOMBAT", "RATINGHIDECOMBAT")

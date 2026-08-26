@@ -1,5 +1,9 @@
 local _, UnitFrameUtils = ...
 UnitFrameUtils:AddTrans("enUS", "LID_GENERAL", "General")
+UnitFrameUtils:AddTrans("enUS", "LID_RAIDICON", "Raid Target Icon")
+UnitFrameUtils:AddTrans("enUS", "LID_SHOWRAIDICON", "Show Raid Target Icon")
+UnitFrameUtils:AddTrans("enUS", "LID_LEADER", "Group Leader")
+UnitFrameUtils:AddTrans("enUS", "LID_SHOWLEADER", "Show Leader Crown")
 UnitFrameUtils:AddTrans("enUS", "LID_MYTHICRATING", "Mythic+ Rating")
 UnitFrameUtils:AddTrans("enUS", "LID_ITEMLEVEL", "Item Level")
 UnitFrameUtils:AddTrans("enUS", "LID_FLAG", "Realm Flag")

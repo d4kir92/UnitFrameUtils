@@ -30,7 +30,8 @@ function UI.WindowMixin:AddSlider(tab)
 
     local slider = CreateFrame("Slider", name .. "Slider", holder, template)
     slider:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, -18)
-    slider:SetSize(width, 16)
+    slider:SetPoint("TOPRIGHT", holder, "TOPRIGHT", 0, -18)
+    slider:SetHeight(16)
     slider:SetOrientation("HORIZONTAL")
     slider:SetMinMaxValues(vmin, vmax)
     slider:SetValueStep(step)
@@ -66,7 +67,7 @@ function UI.WindowMixin:AddSlider(tab)
     label:SetText(FormatText(text, value))
     holder.slider = slider
     holder.Label = label
-    UI:Add(win, holder, HEIGHT, text)
+    UI:Add(win, holder, HEIGHT, text, true)
 
     return holder
 end

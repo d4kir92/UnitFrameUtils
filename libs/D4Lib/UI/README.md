@@ -80,7 +80,9 @@ hit is never hidden behind a closed group.
 
 ## Elements
 
-All `Add*` calls take one options table and return the created frame.
+All `Add*` calls take one options table and return the created frame. Search box,
+category header, slider and dropdown stretch to the window width; the checkbox
+does not, because it is a fixed box with a label next to it.
 
 - `AddCheckbox`: `label`, `value`, `func(value)`
 - `AddSlider`: `label`, `value`, `min`, `max`, `step`, `decimals`, `func(value)`.
@@ -94,8 +96,19 @@ All `Add*` calls take one options table and return the created frame.
 ## Window
 
 `D4:CreateUIWindow` options: `name`, `title`, `width`, `height`, `parent`, `pTab`,
-`templates`. The window is movable, scrollable and starts hidden. `win:Toggle()`
-shows or hides it.
+`templates`, `resizable`, `minWidth`, `minHeight`, `onResize`. The window is movable,
+scrollable and starts hidden. `win:Toggle()` shows or hides it.
+
+## Resizing
+
+The window is resizable by default (pass `resizable = false` to turn it off) via a
+grip in the bottom-right corner, limited by `minWidth` / `minHeight` (300x200 by
+default). While dragging, `contentWidth` is recalculated and `Layout` re-runs, so
+every stretching widget follows along.
+
+The module does not save the size itself. Pass `onResize = function(width, height)`
+and write the values into your own SavedVariables, then feed them back in as
+`width` / `height` the next time you create the window.
 
 ## Scrolling
 

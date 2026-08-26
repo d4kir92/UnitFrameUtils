@@ -1,5 +1,9 @@
 local _, UnitFrameUtils = ...
 UnitFrameUtils:AddTrans("itIT", "LID_GENERAL", "Generale")
+UnitFrameUtils:AddTrans("itIT", "LID_RAIDICON", "Simbolo bersaglio")
+UnitFrameUtils:AddTrans("itIT", "LID_SHOWRAIDICON", "Mostra simbolo bersaglio")
+UnitFrameUtils:AddTrans("itIT", "LID_LEADER", "Capogruppo")
+UnitFrameUtils:AddTrans("itIT", "LID_SHOWLEADER", "Mostra corona del capogruppo")
 UnitFrameUtils:AddTrans("itIT", "LID_MYTHICRATING", "Punteggio Mitica+")
 UnitFrameUtils:AddTrans("itIT", "LID_ITEMLEVEL", "Livello oggetto")
 UnitFrameUtils:AddTrans("itIT", "LID_FLAG", "Bandiera del reame")

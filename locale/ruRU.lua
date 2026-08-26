@@ -1,5 +1,9 @@
 local _, UnitFrameUtils = ...
 UnitFrameUtils:AddTrans("ruRU", "LID_GENERAL", "Общие")
+UnitFrameUtils:AddTrans("ruRU", "LID_RAIDICON", "Метка цели")
+UnitFrameUtils:AddTrans("ruRU", "LID_SHOWRAIDICON", "Показать метку цели")
+UnitFrameUtils:AddTrans("ruRU", "LID_LEADER", "Лидер группы")
+UnitFrameUtils:AddTrans("ruRU", "LID_SHOWLEADER", "Показать корону лидера")
 UnitFrameUtils:AddTrans("ruRU", "LID_MYTHICRATING", "Рейтинг Мифик+")
 UnitFrameUtils:AddTrans("ruRU", "LID_ITEMLEVEL", "Уровень предметов")
 UnitFrameUtils:AddTrans("ruRU", "LID_FLAG", "Флаг игрового мира")

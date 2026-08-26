@@ -1,5 +1,9 @@
 local _, UnitFrameUtils = ...
 UnitFrameUtils:AddTrans("zhCN", "LID_GENERAL", "常规")
+UnitFrameUtils:AddTrans("zhCN", "LID_RAIDICON", "团队标记")
+UnitFrameUtils:AddTrans("zhCN", "LID_SHOWRAIDICON", "显示团队标记")
+UnitFrameUtils:AddTrans("zhCN", "LID_LEADER", "队长")
+UnitFrameUtils:AddTrans("zhCN", "LID_SHOWLEADER", "显示队长皇冠")
 UnitFrameUtils:AddTrans("zhCN", "LID_MYTHICRATING", "史诗钥石评分")
 UnitFrameUtils:AddTrans("zhCN", "LID_ITEMLEVEL", "装备等级")
 UnitFrameUtils:AddTrans("zhCN", "LID_FLAG", "服务器旗帜")
