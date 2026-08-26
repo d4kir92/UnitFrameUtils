@@ -25,6 +25,7 @@ local options = {
     ["SHOWMYTHICRATING"] = true,
     ["RATINGHIDECOMBAT"] = true,
     ["RATINGHIDEINSTANCE"] = true,
+    ["RATINGHIDERAID"] = true,
     ["SHOWLEADER"] = true,
     ["SHOWRAIDICON"] = true,
     ["RAIDICONHIDECOMBAT"] = false
@@ -44,10 +45,11 @@ local function IsRaidFrame(name)
     return true
 end
 
-local function IsFeatureVisible(showKey, combatKey, instanceKey)
+local function IsFeatureVisible(showKey, combatKey, instanceKey, raidKey)
     if not options[showKey] then return false end
     if combatKey and options[combatKey] and InCombatLockdown() then return false end
     if instanceKey and options[instanceKey] and IsInInstance() then return false end
+    if raidKey and options[raidKey] and IsInRaid() then return false end
 
     return true
 end
@@ -61,7 +63,7 @@ local function IsItemLevelVisible()
 end
 
 local function IsRatingVisible()
-    return IsFeatureVisible("SHOWMYTHICRATING", "RATINGHIDECOMBAT", "RATINGHIDEINSTANCE")
+    return IsFeatureVisible("SHOWMYTHICRATING", "RATINGHIDECOMBAT", "RATINGHIDEINSTANCE", "RATINGHIDERAID")
 end
 
 local function IsLeaderVisible()
@@ -279,12 +281,26 @@ local function OnInspectReady(guid)
     end
 end
 
+local function GetFlagScale()
+    if IsInRaid() then return raidFlagScale end
+
+    return flagScale
+end
+
+local function GetFlagOffset()
+    if IsInRaid() then return raidFlagOffset end
+
+    return flagOffset
+end
+
 local function ApplyFlagSize(icon)
-    icon:SetSize(FLAG_SIZE * flagScale, FLAG_SIZE * FLAG_CROP * flagScale)
+    local scale = GetFlagScale()
+    icon:SetSize(FLAG_SIZE * scale, FLAG_SIZE * FLAG_CROP * scale)
 end
 
 local function ApplyFlagPosition(icon, frame)
-    local x, y = flagOffset, flagOffset
+    local offset = GetFlagOffset()
+    local x, y = offset, offset
     if string.find(flagPoint, "RIGHT") then x = -x end
     if string.find(flagPoint, "TOP") then y = -y end
     icon:ClearAllPoints()
@@ -316,7 +332,8 @@ local function AddOverlay(frame)
     leader:Hide()
     local info = frame:CreateFontString(name .. ".UFU_Info", "OVERLAY", "GameFontHighlightSmall")
     info:SetDrawLayer("OVERLAY", 7)
-    info:SetPoint("BOTTOM", frame, "BOTTOM", 0, 2)
+    local healthBar = _G[name .. "HealthBarBackground"] or frame.healthBar or frame
+    info:SetPoint("BOTTOM", healthBar, "BOTTOM", 0, 2)
     info:SetJustifyH("CENTER")
     UnitFrameUtils:SetFontSize(info, 10, "")
     info:SetShadowColor(0, 0, 0, 1)
@@ -345,21 +362,25 @@ end
 
 function UnitFrameUtils:UpdateRaidFrames()
     ScanFrames()
-    for frame in pairs(overlays) do
+    for frame, overlay in pairs(overlays) do
+        ApplyFlagSize(overlay.flag)
+        ApplyFlagPosition(overlay.flag, frame)
         UpdateFrame(frame)
     end
 end
 
-function UnitFrameUtils:SetRealmFlagPosition(point, offset)
+function UnitFrameUtils:SetRealmFlagPosition(point, offset, raidOffset)
     flagPoint = point or "TOPRIGHT"
     flagOffset = offset or 2
+    raidFlagOffset = raidOffset or flagOffset
     for frame, overlay in pairs(overlays) do
         ApplyFlagPosition(overlay.flag, frame)
     end
 end
 
-function UnitFrameUtils:SetRealmFlagScale(scale)
+function UnitFrameUtils:SetRealmFlagScale(scale, raidScale)
     flagScale = scale or 0.7
+    raidFlagScale = raidScale or flagScale
     for _, overlay in pairs(overlays) do
         ApplyFlagSize(overlay.flag)
     end

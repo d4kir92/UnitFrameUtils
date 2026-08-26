@@ -15,6 +15,7 @@ local defaults = {
     ["SHOWMYTHICRATING"] = true,
     ["RATINGHIDECOMBAT"] = true,
     ["RATINGHIDEINSTANCE"] = true,
+    ["RATINGHIDERAID"] = true,
     ["SHOWLEADER"] = true,
     ["SHOWRAIDICON"] = true,
     ["RAIDICONHIDECOMBAT"] = false
@@ -36,8 +37,8 @@ local function ApplySettings()
         UnitFrameUtils:SetOption(key, UnitFrameUtils:GV(UnitFrameUtilsDB, key, default))
     end
 
-    UnitFrameUtils:SetRealmFlagScale(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE", DEFAULT_SCALE))
-    UnitFrameUtils:SetRealmFlagPosition(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGPOINT", "TOPRIGHT"), UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGOFFSET", DEFAULT_OFFSET))
+    UnitFrameUtils:SetRealmFlagScale(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE", DEFAULT_SCALE), UnitFrameUtils:GV(UnitFrameUtilsDB, "RAIDFLAGSCALE", DEFAULT_SCALE))
+    UnitFrameUtils:SetRealmFlagPosition(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGPOINT", "TOPRIGHT"), UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGOFFSET", DEFAULT_OFFSET), UnitFrameUtils:GV(UnitFrameUtilsDB, "RAIDFLAGOFFSET", DEFAULT_OFFSET))
 end
 
 local function AddToggle(label, key)
@@ -100,6 +101,7 @@ function UnitFrameUtils:InitSettings()
     AddToggle("LID_SHOWMYTHICRATING", "SHOWMYTHICRATING")
     AddToggle("LID_HIDEINCOMBAT", "RATINGHIDECOMBAT")
     AddToggle("LID_HIDEININSTANCE", "RATINGHIDEINSTANCE")
+    AddToggle("LID_HIDEINRAID", "RATINGHIDERAID")
     settings:AddCategory({["label"] = "LID_ITEMLEVEL"})
     AddToggle("LID_SHOWITEMLEVEL", "SHOWITEMLEVEL")
     AddToggle("LID_HIDEINCOMBAT", "ILVLHIDECOMBAT")
@@ -118,7 +120,22 @@ function UnitFrameUtils:InitSettings()
             ["decimals"] = 2,
             ["func"] = function(value)
                 UnitFrameUtils:SV(UnitFrameUtilsDB, "FLAGSCALE", value)
-                UnitFrameUtils:SetRealmFlagScale(value)
+                ApplySettings()
+            end
+        }
+    )
+
+    settings:AddSlider(
+        {
+            ["label"] = "LID_RAIDFLAGSCALE",
+            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "RAIDFLAGSCALE", DEFAULT_SCALE),
+            ["min"] = 0.5,
+            ["max"] = 2,
+            ["step"] = 0.05,
+            ["decimals"] = 2,
+            ["func"] = function(value)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, "RAIDFLAGSCALE", value)
+                ApplySettings()
             end
         }
     )
@@ -133,7 +150,22 @@ function UnitFrameUtils:InitSettings()
             ["decimals"] = 0,
             ["func"] = function(value)
                 UnitFrameUtils:SV(UnitFrameUtilsDB, "FLAGOFFSET", value)
-                UnitFrameUtils:SetRealmFlagPosition(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGPOINT", "TOPRIGHT"), value)
+                ApplySettings()
+            end
+        }
+    )
+
+    settings:AddSlider(
+        {
+            ["label"] = "LID_RAIDFLAGOFFSET",
+            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "RAIDFLAGOFFSET", DEFAULT_OFFSET),
+            ["min"] = 0,
+            ["max"] = 20,
+            ["step"] = 1,
+            ["decimals"] = 0,
+            ["func"] = function(value)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, "RAIDFLAGOFFSET", value)
+                ApplySettings()
             end
         }
     )
