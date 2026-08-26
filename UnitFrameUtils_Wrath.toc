@@ -1,17 +1,17 @@
 ## Interface: 30403
-## Version: 0.2.0
+## Version: 0.2.2
 ## Title: UnitFrameUtils |T236373:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
-## Notes: Improves UnitFrames/RaidFrames
-## Notes-deDE: Verbessert Einheitenfenster/Schlachtzugsfenster
-## Notes-esES: 
-## Notes-esMX: 
-## Notes-frFR: 
-## Notes-itIT: 
-## Notes-koKR: 
-## Notes-ptBR: 
-## Notes-ruRU: 
-## Notes-zhCN: 
-## Notes-zhTW: 
+## Notes: Adds item level, Mythic+ rating, realm flags, leader and raid target icons to unit and raid frames
+## Notes-deDE: Fügt Gegenstandsstufe, Mythisch+-Wertung, Realmflaggen, Anführer- und Zielmarkierungssymbole zu Einheiten- und Schlachtzugsfenstern hinzu
+## Notes-esES: Añade nivel de objeto, puntuación de Mítica+, banderas de reino e iconos de líder y de objetivo de banda a los marcos de unidades y de banda
+## Notes-esMX: Agrega nivel de objeto, puntuación de Mítica+, banderas de reino e iconos de líder y de objetivo de banda a los marcos de unidades y de banda
+## Notes-frFR: Ajoute le niveau d'objet, la cote Mythique+, les drapeaux de royaume et les icônes de chef et de cible de raid aux portraits d'unités et de raid
+## Notes-itIT: Aggiunge livello oggetto, punteggio Mitica+, bandiere del reame e icone di capogruppo e bersaglio ai riquadri delle unità e del raid
+## Notes-koKR: 유닛 및 공격대 프레임에 아이템 레벨, 쐐기돌 점수, 서버 국기, 파티장 및 공격대 표적 아이콘을 추가합니다
+## Notes-ptBR: Adiciona nível de item, classificação Mítica+, bandeiras de reino e ícones de líder e de alvo de raide aos quadros de unidade e de raide
+## Notes-ruRU: Добавляет уровень предметов, рейтинг ключей, флаги игровых миров, значки лидера и метки цели в рамки юнитов и рейда
+## Notes-zhCN: 为单位框体和团队框体添加装备等级、大秘境评分、服务器国旗、队长和团队标记图标
+## Notes-zhTW: 為單位框架和團隊框架加入物品等級、傳奇鑰石評分、伺服器國旗、隊長和團隊標記圖示
 ## Author: D4KiR
 ## Category: Unit Frames
 ## Category-deDE: Einheitenfenster
