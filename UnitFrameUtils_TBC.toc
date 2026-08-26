@@ -1,6 +1,6 @@
 ## Interface: 20506
 ## Version: 0.1.0
-## Title: UnitFrameUtils |T135994:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
+## Title: UnitFrameUtils |T236373:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
 ## Notes: Improves UnitFrames/RaidFrames
 ## Notes-deDE: Verbessert Einheitenfenster/Schlachtzugsfenster
 ## Notes-esES: 
@@ -29,7 +29,7 @@
 ## SavedVariablesPerCharacter: UnitFrameUtilsPCDB
 ## X-Curse-Project-ID: 1668911
 ## X-Wago-ID: ZKxZjpNk
-## IconTexture: 
+## IconTexture: 236373
 
 libs\D4Lib\D4Lib.xml
 
@@ -46,3 +46,4 @@ locale\zhCN.lua
 locale\zhTW.lua
 
 Core.lua
+Settings.lua
