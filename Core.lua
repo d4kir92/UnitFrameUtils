@@ -1,12 +1,15 @@
 local _, UnitFrameUtils = ...
 local MEDIA = "Interface\\AddOns\\UnitFrameUtils\\media\\"
+local FLAG_SIZE = 32
+local FLAG_CROP = 43 / 64
+local flagPoint = "TOPRIGHT"
+local flagOffset = 2
 local flags = {}
 local function IsRaidFrame(name)
     if name == nil then return false end
-    if string.find(name, "CompactRaidFrame") then return true end
-    if string.find(name, "CompactRaidGroup") then return true end
-    if string.find(name, "CompactPartyFrame") then return true end
-    return false
+    if string.find(name, "NamePlate") then return false end
+    if string.find(name, "Compact") == nil then return false end
+    return true
 end
 
 local function GetFlagForUnit(unit)
@@ -34,16 +37,25 @@ local function UpdateFlag(frame)
     end
 end
 
+local function ApplyFlagPosition(icon, frame)
+    local x, y = flagOffset, flagOffset
+    if string.find(flagPoint, "RIGHT") then x = -x end
+    if string.find(flagPoint, "TOP") then y = -y end
+    icon:ClearAllPoints()
+    icon:SetPoint(flagPoint, frame, flagPoint, x, y)
+end
+
 local function AddFlag(frame)
     if frame == nil then return end
     if flags[frame] then return end
     local name = frame:GetName()
-    if name == nil then return end
+    if not IsRaidFrame(name) then return end
     local icon = frame:CreateTexture(name .. ".UFU_Flag", "OVERLAY")
     icon:SetDrawLayer("OVERLAY", 7)
-    icon:SetSize(32, 32)
+    icon:SetTexCoord(0, 1, 0, FLAG_CROP)
+    icon:SetSize(FLAG_SIZE, FLAG_SIZE * FLAG_CROP)
     icon:SetScale(1)
-    icon:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -2)
+    ApplyFlagPosition(icon, frame)
     flags[frame] = icon
     UpdateFlag(frame)
 end
@@ -64,6 +76,14 @@ function UnitFrameUtils:UpdateRealmFlags()
     ScanFrames()
     for frame in pairs(flags) do
         UpdateFlag(frame)
+    end
+end
+
+function UnitFrameUtils:SetRealmFlagPosition(point, offset)
+    flagPoint = point or "TOPRIGHT"
+    flagOffset = offset or 2
+    for frame, icon in pairs(flags) do
+        ApplyFlagPosition(icon, frame)
     end
 end
 
