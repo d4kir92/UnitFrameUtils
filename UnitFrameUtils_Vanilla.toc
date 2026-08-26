@@ -1,5 +1,5 @@
 ## Interface: 11509
-## Version: 0.1.0
+## Version: 0.2.0
 ## Title: UnitFrameUtils |T236373:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
 ## Notes: Improves UnitFrames/RaidFrames
 ## Notes-deDE: Verbessert Einheitenfenster/Schlachtzugsfenster

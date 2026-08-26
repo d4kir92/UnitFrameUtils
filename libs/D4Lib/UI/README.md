@@ -83,9 +83,9 @@ recent top-level one, never off another sub-category.
 
 ## Search
 
-`win:AddSearch()` pins a search box above the scroll area — it is parented to the
-window itself, not to the scroll content, so it stays put while everything below it
-scrolls. Adding it pushes the scroll area down by one row.
+`win:AddSearch()` puts a search box into the header, creating the header if there is
+none yet. It is not parented to the scroll content, so it stays put while everything
+below it scrolls, and it sits outside the inset.
 
 It filters every element that is added **after** it. Elements added before the
 search box are never filtered, which is the place for things that must always stay
@@ -129,6 +129,17 @@ every stretching widget follows along.
 The module does not save the size itself. Pass `onResize = function(width, height)`
 and write the values into your own SavedVariables, then feed them back in as
 `width` / `height` the next time you create the window.
+
+## Header and footer
+
+`win:AddHeader({height = 24})` and `win:AddFooter({height = 24})` return an empty
+frame pinned above resp. below the scroll area. Anchor whatever you like into them —
+they are plain frames, the module only positions and sizes them.
+
+Both shrink the scroll area and the inset accordingly, so the sunken panel always
+frames only the scrollable part. Calling them again just changes the height.
+
+The footer keeps 24px clear on the right so it never sits under the resize grip.
 
 ## Scrolling
 

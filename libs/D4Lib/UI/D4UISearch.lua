@@ -5,9 +5,10 @@ function UI.WindowMixin:AddSearch(tab)
     tab = tab or {}
     local win = self
     local name = UI:NextName(win, "Search")
-    local box = CreateFrame("EditBox", name, win, "InputBoxTemplate")
-    box:SetPoint("TOPLEFT", win, "TOPLEFT", 18, -34)
-    box:SetPoint("TOPRIGHT", win, "TOPRIGHT", -18, -34)
+    local header = win.header or win:AddHeader({["height"] = UI.ROW})
+    local box = CreateFrame("EditBox", name, header, "InputBoxTemplate")
+    box:SetPoint("LEFT", header, "LEFT", 6, 0)
+    box:SetPoint("RIGHT", header, "RIGHT", 0, 0)
     box:SetHeight(UI.ROW)
     box:SetAutoFocus(false)
     box:SetMaxLetters(tab.maxLetters or 50)
@@ -38,7 +39,6 @@ function UI.WindowMixin:AddSearch(tab)
 
     box:SetScript("OnEnterPressed", function(sel) sel:ClearFocus() end)
     win.search = box
-    win:SetScrollTop(UI.ROW + UI.SPACING * 2)
 
     return box
 end

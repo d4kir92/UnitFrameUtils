@@ -2,6 +2,9 @@ local _, D4 = ...
 local UI = D4.UI
 local windows = 0
 local TOP_INSET = 32
+local BOTTOM_INSET = 4
+local SIDE_INSET = 18
+local GRIP_INSET = 24
 
 local function FindInset(win)
     if win.InsetBg then return win.InsetBg end
@@ -53,24 +56,61 @@ local function CaptureInset(win)
     win.insetAnchors = anchors
 end
 
-function UI.WindowMixin:SetInsetTop(extra)
+function UI.WindowMixin:UpdateInset(topExtra, bottomExtra)
     CaptureInset(self)
     if self.insetAnchors == nil then return end
     self.insetFrame:ClearAllPoints()
     for _, anchor in ipairs(self.insetAnchors) do
         local point, relativeTo, relativePoint, x, y = anchor[1], anchor[2], anchor[3], anchor[4], anchor[5]
-        if string.find(point, "TOP") then y = y - extra end
+        if string.find(point, "TOP") then y = y - topExtra end
+        if string.find(point, "BOTTOM") then y = y + bottomExtra end
         self.insetFrame:SetPoint(point, relativeTo, relativePoint, x, y)
     end
 end
 
-function UI.WindowMixin:SetScrollTop(extra)
-    self:SetInsetTop(extra)
+function UI.WindowMixin:UpdateBodyLayout()
+    local topExtra = 0
+    local bottomExtra = 0
+    if self.headerHeight > 0 then topExtra = self.headerHeight + UI.SPACING end
+    if self.footerHeight > 0 then bottomExtra = self.footerHeight + UI.SPACING end
+    if self.header then
+        self.header:ClearAllPoints()
+        self.header:SetPoint("TOPLEFT", self, "TOPLEFT", SIDE_INSET, -TOP_INSET)
+        self.header:SetPoint("TOPRIGHT", self, "TOPRIGHT", -SIDE_INSET, -TOP_INSET)
+        self.header:SetHeight(self.headerHeight)
+    end
+
+    if self.footer then
+        self.footer:ClearAllPoints()
+        self.footer:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", SIDE_INSET, BOTTOM_INSET)
+        self.footer:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -GRIP_INSET, BOTTOM_INSET)
+        self.footer:SetHeight(self.footerHeight)
+    end
+
+    self:UpdateInset(topExtra, bottomExtra)
     if self.scrollFrame == nil then return end
     if self.scrollInset == nil then return end
     self.scrollFrame:ClearAllPoints()
-    self.scrollFrame:SetPoint("TOPLEFT", self, "TOPLEFT", self.scrollInset.left, -(TOP_INSET + extra))
-    self.scrollFrame:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", self.scrollInset.right, self.scrollInset.bottom)
+    self.scrollFrame:SetPoint("TOPLEFT", self, "TOPLEFT", self.scrollInset.left, -(TOP_INSET + topExtra))
+    self.scrollFrame:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", self.scrollInset.right, self.scrollInset.bottom + bottomExtra)
+end
+
+function UI.WindowMixin:AddHeader(tab)
+    tab = tab or {}
+    if self.header == nil then self.header = CreateFrame("Frame", D4:GetName(self, true) .. "Header", self) end
+    self.headerHeight = tab.height or UI.ROW
+    self:UpdateBodyLayout()
+
+    return self.header
+end
+
+function UI.WindowMixin:AddFooter(tab)
+    tab = tab or {}
+    if self.footer == nil then self.footer = CreateFrame("Frame", D4:GetName(self, true) .. "Footer", self) end
+    self.footerHeight = tab.height or UI.ROW
+    self:UpdateBodyLayout()
+
+    return self.footer
 end
 
 local function HasModernScroll()
@@ -90,7 +130,7 @@ local function CreateModernScroll(win, name)
         ["bottom"] = 22
     }
 
-    win:SetScrollTop(0)
+    win:UpdateBodyLayout()
     local scrollBar = CreateFrame("EventFrame", name .. "ScrollBar", win, "MinimalScrollBar")
     scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 6, 0)
     scrollBar:SetPoint("BOTTOMLEFT", scrollBox, "BOTTOMRIGHT", 6, 0)
@@ -157,7 +197,7 @@ local function CreateLegacyScroll(win, name)
         ["bottom"] = 22
     }
 
-    win:SetScrollTop(0)
+    win:UpdateBodyLayout()
     local content = CreateFrame("Frame", name .. "Content", scroll)
     content:SetSize(win.contentWidth, 1)
     scroll:SetScrollChild(content)
@@ -184,6 +224,8 @@ function D4:CreateUIWindow(tab)
     D4:SetClampedToScreen(win, true)
     if win.TitleText then win.TitleText:SetText(UI:Text(tab.title)) end
     UI:ApplyWindow(win)
+    win.headerHeight = 0
+    win.footerHeight = 0
     win.contentWidth = width - 56
     if HasModernScroll() then
         win.content = CreateModernScroll(win, name)
