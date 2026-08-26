@@ -74,6 +74,8 @@ function D4:CreateUIWindow(tab)
     win.elements = {}
     win.count = 0
     win.search = nil
+    win.category = nil
+    win.searching = false
     UI:ApplyWindow(win)
     win:HookScript("OnHide", function() UI:CloseDropdowns() end)
     win:Hide()

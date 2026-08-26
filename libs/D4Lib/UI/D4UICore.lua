@@ -4,6 +4,7 @@ local UI = D4.UI
 UI.PADDING = 4
 UI.SPACING = 10
 UI.ROW = 24
+UI.INDENT = 16
 UI.WindowMixin = {}
 
 function UI:Text(key, ...)
@@ -38,7 +39,11 @@ function UI:Add(win, frame, height, label)
         ["height"] = height or UI.ROW,
         ["label"] = string.lower(label or ""),
         ["filter"] = win.search ~= nil,
-        ["shown"] = true,
+        ["category"] = win.category,
+        ["isCategory"] = false,
+        ["collapsed"] = false,
+        ["match"] = true,
+        ["selfMatch"] = true,
     }
 
     tinsert(win.elements, element)
@@ -55,12 +60,22 @@ function UI:CloseDropdowns()
     end
 end
 
+function UI.WindowMixin:IsElementVisible(element)
+    if not element.match then return false end
+    if self.searching then return true end
+    if element.category and element.category.collapsed then return false end
+
+    return true
+end
+
 function UI.WindowMixin:Layout()
     local y = -UI.PADDING
     for _, element in ipairs(self.elements) do
-        if element.shown then
+        if self:IsElementVisible(element) then
+            local x = UI.PADDING
+            if element.category then x = x + UI.INDENT end
             element.frame:ClearAllPoints()
-            element.frame:SetPoint("TOPLEFT", self.content, "TOPLEFT", UI.PADDING, y)
+            element.frame:SetPoint("TOPLEFT", self.content, "TOPLEFT", x, y)
             element.frame:Show()
             y = y - element.height - UI.SPACING
         else
@@ -81,9 +96,33 @@ end
 
 function UI.WindowMixin:Filter(text)
     text = string.lower(strtrim(text or ""))
+    self.searching = text ~= ""
     for _, element in ipairs(self.elements) do
-        if element.filter then
-            element.shown = text == "" or string.find(element.label, text, 1, true) ~= nil
+        if element.filter and self.searching then
+            element.selfMatch = string.find(element.label, text, 1, true) ~= nil
+        else
+            element.selfMatch = true
+        end
+
+        element.match = element.selfMatch
+    end
+
+    for _, category in ipairs(self.elements) do
+        if category.isCategory and category.selfMatch and self.searching then
+            for _, child in ipairs(self.elements) do
+                if child.category == category then child.match = true end
+            end
+        end
+    end
+
+    for _, category in ipairs(self.elements) do
+        if category.isCategory and not category.match then
+            for _, child in ipairs(self.elements) do
+                if child.category == category and child.match then
+                    category.match = true
+                    break
+                end
+            end
         end
     end
 

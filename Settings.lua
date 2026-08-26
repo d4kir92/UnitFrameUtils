@@ -3,6 +3,7 @@ local ICON = 135994
 local DEFAULT_SCALE = 0.7
 local DEFAULT_OFFSET = 2
 local settings = nil
+local toggles = {"SHOWFLAG", "FLAGHIDECOMBAT", "FLAGHIDEINSTANCE", "SHOWITEMLEVEL", "ILVLHIDECOMBAT", "ILVLHIDEINSTANCE", "SHOWMYTHICRATING", "RATINGHIDECOMBAT", "RATINGHIDEINSTANCE"}
 
 local function GetTocVersion()
     if C_AddOns and C_AddOns.GetAddOnMetadata then return C_AddOns.GetAddOnMetadata("UnitFrameUtils", "Version") end
@@ -15,12 +16,26 @@ local function ShowMinimapButtonDefault()
     return UnitFrameUtils:GetWoWBuild() ~= "RETAIL"
 end
 
-local function ApplyFlagSettings()
-    UnitFrameUtils:SetShowRealmFlag(UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWFLAG", true))
-    UnitFrameUtils:SetShowItemLevel(UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWITEMLEVEL", true))
-    UnitFrameUtils:SetShowMythicRating(UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWMYTHICRATING", true))
+local function ApplySettings()
+    for _, key in ipairs(toggles) do
+        UnitFrameUtils:SetOption(key, UnitFrameUtils:GV(UnitFrameUtilsDB, key, true))
+    end
+
     UnitFrameUtils:SetRealmFlagScale(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE", DEFAULT_SCALE))
     UnitFrameUtils:SetRealmFlagPosition(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGPOINT", "TOPRIGHT"), UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGOFFSET", DEFAULT_OFFSET))
+end
+
+local function AddToggle(label, key)
+    settings:AddCheckbox(
+        {
+            ["label"] = label,
+            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, key, true),
+            ["func"] = function(value)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, key, value)
+                UnitFrameUtils:SetOption(key, value)
+            end
+        }
+    )
 end
 
 function UnitFrameUtils:ToggleSettings()
@@ -33,12 +48,13 @@ function UnitFrameUtils:InitSettings()
             ["name"] = "UnitFrameUtilsSettings",
             ["pTab"] = {"CENTER"},
             ["width"] = 460,
-            ["height"] = 320,
+            ["height"] = 520,
             ["title"] = format("UnitFrameUtils v%s", GetTocVersion())
         }
     )
 
     settings:AddSearch()
+    settings:AddCategory({["label"] = "LID_GENERAL"})
     settings:AddCheckbox(
         {
             ["label"] = "LID_SHOWMINIMAPBUTTON",
@@ -54,39 +70,18 @@ function UnitFrameUtils:InitSettings()
         }
     )
 
-    settings:AddCheckbox(
-        {
-            ["label"] = "LID_SHOWFLAG",
-            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWFLAG", true),
-            ["func"] = function(value)
-                UnitFrameUtils:SV(UnitFrameUtilsDB, "SHOWFLAG", value)
-                UnitFrameUtils:SetShowRealmFlag(value)
-            end
-        }
-    )
-
-    settings:AddCheckbox(
-        {
-            ["label"] = "LID_SHOWITEMLEVEL",
-            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWITEMLEVEL", true),
-            ["func"] = function(value)
-                UnitFrameUtils:SV(UnitFrameUtilsDB, "SHOWITEMLEVEL", value)
-                UnitFrameUtils:SetShowItemLevel(value)
-            end
-        }
-    )
-
-    settings:AddCheckbox(
-        {
-            ["label"] = "LID_SHOWMYTHICRATING",
-            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWMYTHICRATING", true),
-            ["func"] = function(value)
-                UnitFrameUtils:SV(UnitFrameUtilsDB, "SHOWMYTHICRATING", value)
-                UnitFrameUtils:SetShowMythicRating(value)
-            end
-        }
-    )
-
+    settings:AddCategory({["label"] = "LID_MYTHICRATING"})
+    AddToggle("LID_SHOWMYTHICRATING", "SHOWMYTHICRATING")
+    AddToggle("LID_HIDEINCOMBAT", "RATINGHIDECOMBAT")
+    AddToggle("LID_HIDEININSTANCE", "RATINGHIDEINSTANCE")
+    settings:AddCategory({["label"] = "LID_ITEMLEVEL"})
+    AddToggle("LID_SHOWITEMLEVEL", "SHOWITEMLEVEL")
+    AddToggle("LID_HIDEINCOMBAT", "ILVLHIDECOMBAT")
+    AddToggle("LID_HIDEININSTANCE", "ILVLHIDEINSTANCE")
+    settings:AddCategory({["label"] = "LID_FLAG"})
+    AddToggle("LID_SHOWFLAG", "SHOWFLAG")
+    AddToggle("LID_HIDEINCOMBAT", "FLAGHIDECOMBAT")
+    AddToggle("LID_HIDEININSTANCE", "FLAGHIDEINSTANCE")
     settings:AddSlider(
         {
             ["label"] = "LID_FLAGSCALE",
@@ -146,7 +141,7 @@ loader:SetScript(
         )
 
         UnitFrameUtils:InitSettings()
-        ApplyFlagSettings()
+        ApplySettings()
         UnitFrameUtils:AddSlash("ufu", function() UnitFrameUtils:ToggleSettings() end)
         UnitFrameUtils:AddSlash("unitframeutils", function() UnitFrameUtils:ToggleSettings() end)
     end

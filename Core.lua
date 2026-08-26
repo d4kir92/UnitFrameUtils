@@ -6,9 +6,18 @@ local INSPECT_DELAY = 2
 local flagPoint = "TOPRIGHT"
 local flagOffset = 2
 local flagScale = 0.7
-local showFlag = true
-local showItemLevel = true
-local showRating = true
+local options = {
+    ["SHOWFLAG"] = true,
+    ["FLAGHIDECOMBAT"] = true,
+    ["FLAGHIDEINSTANCE"] = true,
+    ["SHOWITEMLEVEL"] = true,
+    ["ILVLHIDECOMBAT"] = true,
+    ["ILVLHIDEINSTANCE"] = true,
+    ["SHOWMYTHICRATING"] = true,
+    ["RATINGHIDECOMBAT"] = true,
+    ["RATINGHIDEINSTANCE"] = true
+}
+
 local overlays = {}
 local inspectQueue = {}
 local nextInspect = 0
@@ -21,6 +30,26 @@ local function IsRaidFrame(name)
     if string.find(name, "Compact") == nil then return false end
 
     return true
+end
+
+local function IsFeatureVisible(showKey, combatKey, instanceKey)
+    if not options[showKey] then return false end
+    if options[combatKey] and InCombatLockdown() then return false end
+    if options[instanceKey] and IsInInstance() then return false end
+
+    return true
+end
+
+local function IsFlagVisible()
+    return IsFeatureVisible("SHOWFLAG", "FLAGHIDECOMBAT", "FLAGHIDEINSTANCE")
+end
+
+local function IsItemLevelVisible()
+    return IsFeatureVisible("SHOWITEMLEVEL", "ILVLHIDECOMBAT", "ILVLHIDEINSTANCE")
+end
+
+local function IsRatingVisible()
+    return IsFeatureVisible("SHOWMYTHICRATING", "RATINGHIDECOMBAT", "RATINGHIDEINSTANCE")
 end
 
 local function GetUnit(frame)
@@ -72,14 +101,14 @@ end
 
 local function GetInfoText(unit)
     local parts = {}
-    if showItemLevel then
+    if IsItemLevelVisible() then
         local ilvl = GetItemLevelForUnit(unit)
-        if ilvl then tinsert(parts, "i: " .. ilvl) end
+        if ilvl then tinsert(parts, UnitFrameUtils:Trans("LID_ILVL") .. ": " .. ilvl) end
     end
 
-    if showRating then
+    if IsRatingVisible() then
         local score = GetRatingForUnit(unit)
-        if score then tinsert(parts, "R: " .. score) end
+        if score then tinsert(parts, UnitFrameUtils:Trans("LID_MYTHICSHORT") .. ": " .. score) end
     end
 
     if #parts == 0 then return nil end
@@ -88,7 +117,7 @@ local function GetInfoText(unit)
 end
 
 local function QueueInspect(unit)
-    if not showItemLevel then return end
+    if not IsItemLevelVisible() then return end
     if InCombatLockdown() then return end
     if UnitIsUnit(unit, "player") then return end
     if not CanInspect(unit) then return end
@@ -101,7 +130,7 @@ end
 
 local function RunInspectQueue()
     inspectRunning = false
-    if showItemLevel and not InCombatLockdown() and GetTime() >= nextInspect then
+    if IsItemLevelVisible() and not InCombatLockdown() and GetTime() >= nextInspect then
         for guid, unit in pairs(inspectQueue) do
             inspectQueue[guid] = nil
             if UnitExists(unit) and UnitGUID(unit) == guid and CanInspect(unit) then
@@ -128,7 +157,7 @@ local function UpdateFlag(frame)
     if overlay == nil then return end
     local unit = GetUnit(frame)
     local lang = nil
-    if showFlag and unit then lang = GetRealmFlagForUnit(unit) end
+    if unit and IsFlagVisible() then lang = GetRealmFlagForUnit(unit) end
     if lang then
         overlay.flag:SetTexture(MEDIA .. lang)
         overlay.flag:Show()
@@ -263,25 +292,19 @@ function UnitFrameUtils:SetRealmFlagScale(scale)
     end
 end
 
-function UnitFrameUtils:SetShowRealmFlag(value)
-    showFlag = value == true
+function UnitFrameUtils:SetOption(key, value)
+    if key == nil then return end
+    if options[key] == nil then return end
+    options[key] = value == true
     for frame in pairs(overlays) do
-        UpdateFlag(frame)
+        UpdateFrame(frame)
     end
 end
 
-function UnitFrameUtils:SetShowItemLevel(value)
-    showItemLevel = value == true
-    for frame in pairs(overlays) do
-        UpdateInfo(frame)
-    end
-end
+function UnitFrameUtils:GetOption(key)
+    if key == nil then return nil end
 
-function UnitFrameUtils:SetShowMythicRating(value)
-    showRating = value == true
-    for frame in pairs(overlays) do
-        UpdateInfo(frame)
-    end
+    return options[key]
 end
 
 if _G["CompactUnitFrame_UpdateName"] then
@@ -296,6 +319,8 @@ local eventFrame = CreateFrame("Frame")
 UnitFrameUtils:RegisterEvent(eventFrame, "PLAYER_ENTERING_WORLD")
 UnitFrameUtils:RegisterEvent(eventFrame, "GROUP_ROSTER_UPDATE")
 UnitFrameUtils:RegisterEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+UnitFrameUtils:RegisterEvent(eventFrame, "PLAYER_REGEN_DISABLED")
+UnitFrameUtils:RegisterEvent(eventFrame, "ZONE_CHANGED_NEW_AREA")
 UnitFrameUtils:RegisterEvent(eventFrame, "UNIT_NAME_UPDATE")
 UnitFrameUtils:RegisterEvent(eventFrame, "INSPECT_READY")
 eventFrame:SetScript(

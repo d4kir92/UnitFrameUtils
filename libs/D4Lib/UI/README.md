@@ -11,6 +11,7 @@ so any string starting with `LID_` is translated and any other string is used as
 | `D4UITranslations.lua` | translations the UI itself needs (`LID_SEARCH`) |
 | `D4UIWindow.lua` | `D4:CreateUIWindow` |
 | `D4UISearch.lua` | `win:AddSearch` |
+| `D4UICategory.lua` | `win:AddCategory` |
 | `D4UICheckbox.lua` | `win:AddCheckbox` |
 | `D4UISlider.lua` | `win:AddSlider` |
 | `D4UIDropdown.lua` | `win:AddDropdown` |
@@ -58,6 +59,12 @@ win:AddDropdown({
 win:Show()
 ```
 
+## Categories
+
+`win:AddCategory({label = "LID_..."})` starts a collapsible group. Every element
+added afterwards belongs to it, is indented, and is hidden while the category is
+collapsed. Clicking the header toggles it. Pass `collapsed = true` to start closed.
+
 ## Search
 
 `win:AddSearch()` filters every element that is added **after** it. Elements added
@@ -65,6 +72,11 @@ before the search box are always visible, which is the place for things that mus
 never disappear. Matching is case-insensitive against the translated label.
 
 Options: `label` (defaults to `LID_SEARCH`), `maxLetters`.
+
+Search and categories combine: a category is shown when its own label matches or
+any of its children match, a category whose own label matches pulls in all of its
+children, and while a search is active collapsed categories are shown anyway so a
+hit is never hidden behind a closed group.
 
 ## Elements
 
