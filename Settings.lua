@@ -81,6 +81,25 @@ local function AddOffsetSlider(label, key)
     })
 end
 
+local function GetCollapsed(key)
+    if key == nil then return nil end
+    if type(UnitFrameUtilsDB) ~= "table" then return nil end
+    if type(UnitFrameUtilsDB["COLLAPSED"]) ~= "table" then return nil end
+
+    return UnitFrameUtilsDB["COLLAPSED"][key]
+end
+
+local function SetCollapsed(key, collapsed)
+    if key == nil then return end
+    if type(UnitFrameUtilsDB) ~= "table" then return end
+    if type(UnitFrameUtilsDB["COLLAPSED"]) ~= "table" then UnitFrameUtilsDB["COLLAPSED"] = {} end
+    if collapsed then
+        UnitFrameUtilsDB["COLLAPSED"][key] = true
+    else
+        UnitFrameUtilsDB["COLLAPSED"][key] = nil
+    end
+end
+
 local function AddToggle(label, key)
     settings:AddCheckbox({
         ["label"] = label,
@@ -108,12 +127,15 @@ function UnitFrameUtils:InitSettings()
             UnitFrameUtils:SV(UnitFrameUtilsDB, "WINDOWWIDTH", width)
             UnitFrameUtils:SV(UnitFrameUtilsDB, "WINDOWHEIGHT", height)
         end,
+        ["getCollapsed"] = function(key) return GetCollapsed(key) end,
+        ["setCollapsed"] = function(key, collapsed) SetCollapsed(key, collapsed) end,
         ["title"] = format("|T236373:16:16:0:0|t UnitFrameUtils v%s", GetTocVersion())
     })
 
     settings:AddSearch()
     settings:AddCategory({
-        ["label"] = "LID_GENERAL"
+        ["label"] = "LID_GENERAL",
+        ["key"] = "GENERAL"
     })
 
     settings:AddCheckbox({
@@ -130,18 +152,21 @@ function UnitFrameUtils:InitSettings()
     })
 
     settings:AddCategory({
-        ["label"] = "LID_RAIDICON"
+        ["label"] = "LID_RAIDICON",
+        ["key"] = "RAIDICON"
     })
 
     AddToggle("LID_SHOWRAIDICON", "SHOWRAIDICON")
     AddToggle("LID_HIDEINCOMBAT", "RAIDICONHIDECOMBAT")
     settings:AddCategory({
-        ["label"] = "LID_LEADER"
+        ["label"] = "LID_LEADER",
+        ["key"] = "LEADER"
     })
 
     AddToggle("LID_SHOWLEADER", "SHOWLEADER")
     settings:AddCategory({
-        ["label"] = "LID_MYTHICRATING"
+        ["label"] = "LID_MYTHICRATING",
+        ["key"] = "MYTHICRATING"
     })
 
     AddToggle("LID_SHOWMYTHICRATING", "SHOWMYTHICRATING")
@@ -149,18 +174,21 @@ function UnitFrameUtils:InitSettings()
     AddToggle("LID_HIDEININSTANCE", "RATINGHIDEINSTANCE")
     AddToggle("LID_HIDEINRAID", "RATINGHIDERAID")
     settings:AddCategory({
-        ["label"] = "LID_ITEMLEVEL"
+        ["label"] = "LID_ITEMLEVEL",
+        ["key"] = "ITEMLEVEL"
     })
 
     AddToggle("LID_SHOWITEMLEVEL", "SHOWITEMLEVEL")
     AddToggle("LID_HIDEINCOMBAT", "ILVLHIDECOMBAT")
     AddToggle("LID_HIDEININSTANCE", "ILVLHIDEINSTANCE")
     settings:AddCategory({
-        ["label"] = "LID_FLAG"
+        ["label"] = "LID_FLAG",
+        ["key"] = "FLAG"
     })
 
     settings:AddCategory({
         ["label"] = "LID_GROUP",
+        ["key"] = "FLAGGROUP",
         ["sub"] = true
     })
 
@@ -171,6 +199,7 @@ function UnitFrameUtils:InitSettings()
     AddOffsetSlider("LID_FLAGOFFSET", "FLAGOFFSETGROUP")
     settings:AddCategory({
         ["label"] = "LID_RAID",
+        ["key"] = "FLAGRAID",
         ["sub"] = true
     })
 
