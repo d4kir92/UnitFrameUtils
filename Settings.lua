@@ -16,6 +16,9 @@ local function ShowMinimapButtonDefault()
 end
 
 local function ApplyFlagSettings()
+    UnitFrameUtils:SetShowRealmFlag(UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWFLAG", true))
+    UnitFrameUtils:SetShowItemLevel(UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWITEMLEVEL", true))
+    UnitFrameUtils:SetShowMythicRating(UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWMYTHICRATING", true))
     UnitFrameUtils:SetRealmFlagScale(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE", DEFAULT_SCALE))
     UnitFrameUtils:SetRealmFlagPosition(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGPOINT", "TOPRIGHT"), UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGOFFSET", DEFAULT_OFFSET))
 end
@@ -47,6 +50,39 @@ function UnitFrameUtils:InitSettings()
                 else
                     UnitFrameUtils:HideMMBtn("UnitFrameUtils")
                 end
+            end
+        }
+    )
+
+    settings:AddCheckbox(
+        {
+            ["label"] = "LID_SHOWFLAG",
+            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWFLAG", true),
+            ["func"] = function(value)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, "SHOWFLAG", value)
+                UnitFrameUtils:SetShowRealmFlag(value)
+            end
+        }
+    )
+
+    settings:AddCheckbox(
+        {
+            ["label"] = "LID_SHOWITEMLEVEL",
+            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWITEMLEVEL", true),
+            ["func"] = function(value)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, "SHOWITEMLEVEL", value)
+                UnitFrameUtils:SetShowItemLevel(value)
+            end
+        }
+    )
+
+    settings:AddCheckbox(
+        {
+            ["label"] = "LID_SHOWMYTHICRATING",
+            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "SHOWMYTHICRATING", true),
+            ["func"] = function(value)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, "SHOWMYTHICRATING", value)
+                UnitFrameUtils:SetShowMythicRating(value)
             end
         }
     )
