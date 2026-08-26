@@ -69,6 +69,14 @@ function UI.WindowMixin:Layout()
     end
 
     self.content:SetHeight(math.max(1, -y + UI.PADDING))
+    self:UpdateScroll()
+end
+
+function UI.WindowMixin:UpdateScroll()
+    if self.scrollBox == nil then return end
+    if self.scrollBox.FullUpdate == nil then return end
+    if ScrollBoxConstants == nil then return end
+    self.scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately)
 end
 
 function UI.WindowMixin:Filter(text)

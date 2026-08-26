@@ -84,3 +84,14 @@ All `Add*` calls take one options table and return the created frame.
 `D4:CreateUIWindow` options: `name`, `title`, `width`, `height`, `parent`, `pTab`,
 `templates`. The window is movable, scrollable and starts hidden. `win:Toggle()`
 shows or hides it.
+
+## Scrolling
+
+If the client has `WowScrollBox`, `MinimalScrollBar`, `ScrollUtil` and
+`CreateScrollBoxLinearView` (retail 10.0+), the window uses the modern scrollbar
+Blizzard uses in its own options panel, and `win.scrollBox` / `win.scrollBar` are set.
+Otherwise it falls back to `UIPanelScrollFrameTemplate` and sets `win.scroll`.
+
+Either way the content is a single frame that all widgets are anchored into, so
+`win:Layout()` only resizes that frame; `win:UpdateScroll()` afterwards tells the
+scroll box to recalculate its range and is a no-op on the fallback path.
