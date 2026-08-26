@@ -38,7 +38,7 @@ function UI.WindowMixin:AddSearch(tab)
 
     box:SetScript("OnEnterPressed", function(sel) sel:ClearFocus() end)
     win.search = box
-    win:SetScrollTop(UI.ROW + UI.SPACING)
+    win:SetScrollTop(UI.ROW + UI.SPACING * 2)
 
     return box
 end
