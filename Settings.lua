@@ -1,6 +1,11 @@
 local _, UnitFrameUtils = ...
 local ICON = 236373
-local DEFAULT_SCALE = 0.7
+local MIN_SCALE = 0.2
+local DEFAULT_SCALE = {
+    ["GROUP"] = 0.7,
+    ["RAID"] = 0.5
+}
+
 local DEFAULT_OFFSET = 2
 local settings = nil
 local DEFAULT_WIDTH = 460
@@ -41,43 +46,39 @@ local function ApplySettings()
 
     UnitFrameUtils:SetRealmFlagPoint(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGPOINT", "TOPRIGHT"))
     for _, context in ipairs({"GROUP", "RAID"}) do
-        UnitFrameUtils:SetRealmFlagScale(context, UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE" .. context, DEFAULT_SCALE))
+        UnitFrameUtils:SetRealmFlagScale(context, UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE" .. context, DEFAULT_SCALE[context]))
         UnitFrameUtils:SetRealmFlagOffset(context, UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGOFFSET" .. context, DEFAULT_OFFSET))
     end
 end
 
-local function AddScaleSlider(label, key)
-    settings:AddSlider(
-        {
-            ["label"] = label,
-            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, key, DEFAULT_SCALE),
-            ["min"] = 0.5,
-            ["max"] = 2,
-            ["step"] = 0.05,
-            ["decimals"] = 2,
-            ["func"] = function(value)
-                UnitFrameUtils:SV(UnitFrameUtilsDB, key, value)
-                ApplySettings()
-            end
-        }
-    )
+local function AddScaleSlider(label, key, context)
+    settings:AddSlider({
+        ["label"] = label,
+        ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, key, DEFAULT_SCALE[context]),
+        ["min"] = MIN_SCALE,
+        ["max"] = 2,
+        ["step"] = 0.05,
+        ["decimals"] = 2,
+        ["func"] = function(value)
+            UnitFrameUtils:SV(UnitFrameUtilsDB, key, value)
+            ApplySettings()
+        end
+    })
 end
 
 local function AddOffsetSlider(label, key)
-    settings:AddSlider(
-        {
-            ["label"] = label,
-            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, key, DEFAULT_OFFSET),
-            ["min"] = 0,
-            ["max"] = 20,
-            ["step"] = 1,
-            ["decimals"] = 0,
-            ["func"] = function(value)
-                UnitFrameUtils:SV(UnitFrameUtilsDB, key, value)
-                ApplySettings()
-            end
-        }
-    )
+    settings:AddSlider({
+        ["label"] = label,
+        ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, key, DEFAULT_OFFSET),
+        ["min"] = 0,
+        ["max"] = 20,
+        ["step"] = 1,
+        ["decimals"] = 0,
+        ["func"] = function(value)
+            UnitFrameUtils:SV(UnitFrameUtilsDB, key, value)
+            ApplySettings()
+        end
+    })
 end
 
 local function AddToggle(label, key)
@@ -107,7 +108,7 @@ function UnitFrameUtils:InitSettings()
             UnitFrameUtils:SV(UnitFrameUtilsDB, "WINDOWWIDTH", width)
             UnitFrameUtils:SV(UnitFrameUtilsDB, "WINDOWHEIGHT", height)
         end,
-        ["title"] = format("UnitFrameUtils v%s", GetTocVersion())
+        ["title"] = format("|T236373:16:16:0:0|t UnitFrameUtils v%s", GetTocVersion())
     })
 
     settings:AddSearch()
@@ -166,7 +167,7 @@ function UnitFrameUtils:InitSettings()
     AddToggle("LID_SHOWFLAG", "SHOWFLAGGROUP")
     AddToggle("LID_HIDEINCOMBAT", "FLAGHIDECOMBATGROUP")
     AddToggle("LID_HIDEININSTANCE", "FLAGHIDEINSTANCEGROUP")
-    AddScaleSlider("LID_FLAGSCALE", "FLAGSCALEGROUP")
+    AddScaleSlider("LID_FLAGSCALE", "FLAGSCALEGROUP", "GROUP")
     AddOffsetSlider("LID_FLAGOFFSET", "FLAGOFFSETGROUP")
     settings:AddCategory({
         ["label"] = "LID_RAID",
@@ -176,7 +177,7 @@ function UnitFrameUtils:InitSettings()
     AddToggle("LID_SHOWFLAG", "SHOWFLAGRAID")
     AddToggle("LID_HIDEINCOMBAT", "FLAGHIDECOMBATRAID")
     AddToggle("LID_HIDEININSTANCE", "FLAGHIDEINSTANCERAID")
-    AddScaleSlider("LID_FLAGSCALE", "FLAGSCALERAID")
+    AddScaleSlider("LID_FLAGSCALE", "FLAGSCALERAID", "RAID")
     AddOffsetSlider("LID_FLAGOFFSET", "FLAGOFFSETRAID")
 end
 
@@ -191,7 +192,7 @@ loader:SetScript("OnEvent", function()
         ["icon"] = ICON,
         ["dbtab"] = UnitFrameUtilsDB,
         ["dbkey"] = "SHOWMINIMAPBUTTON",
-        ["vTT"] = {{"UnitFrameUtils", "v" .. GetTocVersion()}, {UnitFrameUtils:Trans("LID_LEFTCLICK"), UnitFrameUtils:Trans("LID_OPENSETTINGS")}, {UnitFrameUtils:Trans("LID_RIGHTCLICK"), UnitFrameUtils:Trans("LID_HIDEMINIMAPBUTTON")}},
+        ["vTT"] = {{"|T236373:16:16:0:0|t UnitFrameUtils", "v" .. GetTocVersion()}, {UnitFrameUtils:Trans("LID_LEFTCLICK"), UnitFrameUtils:Trans("LID_OPENSETTINGS")}, {UnitFrameUtils:Trans("LID_RIGHTCLICK"), UnitFrameUtils:Trans("LID_HIDEMINIMAPBUTTON")}},
         ["funcL"] = function() UnitFrameUtils:ToggleSettings() end,
         ["funcR"] = function()
             UnitFrameUtils:SV(UnitFrameUtilsDB, "SHOWMINIMAPBUTTON", false)
@@ -203,7 +204,4 @@ loader:SetScript("OnEvent", function()
     ApplySettings()
     UnitFrameUtils:AddSlash("ufu", function() UnitFrameUtils:ToggleSettings() end)
     UnitFrameUtils:AddSlash("unitframeutils", function() UnitFrameUtils:ToggleSettings() end)
-    print("LOADED")
 end)
-
-print("HÄ")

@@ -18,7 +18,7 @@ local flagOffset = {
 
 local flagScale = {
     ["GROUP"] = 0.7,
-    ["RAID"] = 0.7
+    ["RAID"] = 0.5
 }
 local options = {
     ["SHOWFLAGGROUP"] = true,
