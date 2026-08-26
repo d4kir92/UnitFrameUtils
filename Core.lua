@@ -38,6 +38,7 @@ local function AddFlag(frame)
     if frame == nil then return end
     if flags[frame] then return end
     local name = frame:GetName()
+    if name == nil then return end
     local icon = frame:CreateTexture(name .. ".UFU_Flag", "OVERLAY")
     icon:SetDrawLayer("OVERLAY", 7)
     icon:SetSize(32, 32)
