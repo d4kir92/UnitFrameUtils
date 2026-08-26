@@ -52,3 +52,4 @@ locale\zhCN.lua
 locale\zhTW.lua
 
 Core.lua
+Settings.lua

@@ -4,6 +4,7 @@ local FLAG_SIZE = 32
 local FLAG_CROP = 43 / 64
 local flagPoint = "TOPRIGHT"
 local flagOffset = 2
+local flagScale = 0.7
 local flags = {}
 local function IsRaidFrame(name)
     if name == nil then return false end
@@ -37,6 +38,10 @@ local function UpdateFlag(frame)
     end
 end
 
+local function ApplyFlagSize(icon)
+    icon:SetSize(FLAG_SIZE * flagScale, FLAG_SIZE * FLAG_CROP * flagScale)
+end
+
 local function ApplyFlagPosition(icon, frame)
     local x, y = flagOffset, flagOffset
     if string.find(flagPoint, "RIGHT") then x = -x end
@@ -53,7 +58,7 @@ local function AddFlag(frame)
     local icon = frame:CreateTexture(name .. ".UFU_Flag", "OVERLAY")
     icon:SetDrawLayer("OVERLAY", 7)
     icon:SetTexCoord(0, 1, 0, FLAG_CROP)
-    icon:SetSize(FLAG_SIZE, FLAG_SIZE * FLAG_CROP)
+    ApplyFlagSize(icon)
     icon:SetScale(1)
     ApplyFlagPosition(icon, frame)
     flags[frame] = icon
@@ -84,6 +89,13 @@ function UnitFrameUtils:SetRealmFlagPosition(point, offset)
     flagOffset = offset or 2
     for frame, icon in pairs(flags) do
         ApplyFlagPosition(icon, frame)
+    end
+end
+
+function UnitFrameUtils:SetRealmFlagScale(scale)
+    flagScale = scale or 0.7
+    for _, icon in pairs(flags) do
+        ApplyFlagSize(icon)
     end
 end
 
