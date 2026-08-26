@@ -6,9 +6,12 @@ local settings = nil
 local DEFAULT_WIDTH = 460
 local DEFAULT_HEIGHT = 520
 local defaults = {
-    ["SHOWFLAG"] = true,
-    ["FLAGHIDECOMBAT"] = true,
-    ["FLAGHIDEINSTANCE"] = true,
+    ["SHOWFLAGGROUP"] = true,
+    ["FLAGHIDECOMBATGROUP"] = true,
+    ["FLAGHIDEINSTANCEGROUP"] = true,
+    ["SHOWFLAGRAID"] = true,
+    ["FLAGHIDECOMBATRAID"] = true,
+    ["FLAGHIDEINSTANCERAID"] = true,
     ["SHOWITEMLEVEL"] = true,
     ["ILVLHIDECOMBAT"] = true,
     ["ILVLHIDEINSTANCE"] = true,
@@ -36,8 +39,45 @@ local function ApplySettings()
         UnitFrameUtils:SetOption(key, UnitFrameUtils:GV(UnitFrameUtilsDB, key, default))
     end
 
-    UnitFrameUtils:SetRealmFlagScale(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE", DEFAULT_SCALE), UnitFrameUtils:GV(UnitFrameUtilsDB, "RAIDFLAGSCALE", DEFAULT_SCALE))
-    UnitFrameUtils:SetRealmFlagPosition(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGPOINT", "TOPRIGHT"), UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGOFFSET", DEFAULT_OFFSET), UnitFrameUtils:GV(UnitFrameUtilsDB, "RAIDFLAGOFFSET", DEFAULT_OFFSET))
+    UnitFrameUtils:SetRealmFlagPoint(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGPOINT", "TOPRIGHT"))
+    for _, context in ipairs({"GROUP", "RAID"}) do
+        UnitFrameUtils:SetRealmFlagScale(context, UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE" .. context, DEFAULT_SCALE))
+        UnitFrameUtils:SetRealmFlagOffset(context, UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGOFFSET" .. context, DEFAULT_OFFSET))
+    end
+end
+
+local function AddScaleSlider(label, key)
+    settings:AddSlider(
+        {
+            ["label"] = label,
+            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, key, DEFAULT_SCALE),
+            ["min"] = 0.5,
+            ["max"] = 2,
+            ["step"] = 0.05,
+            ["decimals"] = 2,
+            ["func"] = function(value)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, key, value)
+                ApplySettings()
+            end
+        }
+    )
+end
+
+local function AddOffsetSlider(label, key)
+    settings:AddSlider(
+        {
+            ["label"] = label,
+            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, key, DEFAULT_OFFSET),
+            ["min"] = 0,
+            ["max"] = 20,
+            ["step"] = 1,
+            ["decimals"] = 0,
+            ["func"] = function(value)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, key, value)
+                ApplySettings()
+            end
+        }
+    )
 end
 
 local function AddToggle(label, key)
@@ -118,60 +158,26 @@ function UnitFrameUtils:InitSettings()
         ["label"] = "LID_FLAG"
     })
 
-    AddToggle("LID_SHOWFLAG", "SHOWFLAG")
-    AddToggle("LID_HIDEINCOMBAT", "FLAGHIDECOMBAT")
-    AddToggle("LID_HIDEININSTANCE", "FLAGHIDEINSTANCE")
-    settings:AddSlider({
-        ["label"] = "LID_FLAGSCALE",
-        ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE", DEFAULT_SCALE),
-        ["min"] = 0.5,
-        ["max"] = 2,
-        ["step"] = 0.05,
-        ["decimals"] = 2,
-        ["func"] = function(value)
-            UnitFrameUtils:SV(UnitFrameUtilsDB, "FLAGSCALE", value)
-            ApplySettings()
-        end
+    settings:AddCategory({
+        ["label"] = "LID_GROUP",
+        ["sub"] = true
     })
 
-    settings:AddSlider({
-        ["label"] = "LID_RAIDFLAGSCALE",
-        ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "RAIDFLAGSCALE", DEFAULT_SCALE),
-        ["min"] = 0.5,
-        ["max"] = 2,
-        ["step"] = 0.05,
-        ["decimals"] = 2,
-        ["func"] = function(value)
-            UnitFrameUtils:SV(UnitFrameUtilsDB, "RAIDFLAGSCALE", value)
-            ApplySettings()
-        end
+    AddToggle("LID_SHOWFLAG", "SHOWFLAGGROUP")
+    AddToggle("LID_HIDEINCOMBAT", "FLAGHIDECOMBATGROUP")
+    AddToggle("LID_HIDEININSTANCE", "FLAGHIDEINSTANCEGROUP")
+    AddScaleSlider("LID_FLAGSCALE", "FLAGSCALEGROUP")
+    AddOffsetSlider("LID_FLAGOFFSET", "FLAGOFFSETGROUP")
+    settings:AddCategory({
+        ["label"] = "LID_RAID",
+        ["sub"] = true
     })
 
-    settings:AddSlider({
-        ["label"] = "LID_FLAGOFFSET",
-        ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGOFFSET", DEFAULT_OFFSET),
-        ["min"] = 0,
-        ["max"] = 20,
-        ["step"] = 1,
-        ["decimals"] = 0,
-        ["func"] = function(value)
-            UnitFrameUtils:SV(UnitFrameUtilsDB, "FLAGOFFSET", value)
-            ApplySettings()
-        end
-    })
-
-    settings:AddSlider({
-        ["label"] = "LID_RAIDFLAGOFFSET",
-        ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "RAIDFLAGOFFSET", DEFAULT_OFFSET),
-        ["min"] = 0,
-        ["max"] = 20,
-        ["step"] = 1,
-        ["decimals"] = 0,
-        ["func"] = function(value)
-            UnitFrameUtils:SV(UnitFrameUtilsDB, "RAIDFLAGOFFSET", value)
-            ApplySettings()
-        end
-    })
+    AddToggle("LID_SHOWFLAG", "SHOWFLAGRAID")
+    AddToggle("LID_HIDEINCOMBAT", "FLAGHIDECOMBATRAID")
+    AddToggle("LID_HIDEININSTANCE", "FLAGHIDEINSTANCERAID")
+    AddScaleSlider("LID_FLAGSCALE", "FLAGSCALERAID")
+    AddOffsetSlider("LID_FLAGOFFSET", "FLAGOFFSETRAID")
 end
 
 local loader = CreateFrame("Frame", "UnitFrameUtilsSettingsLoader")

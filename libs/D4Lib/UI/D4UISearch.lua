@@ -5,8 +5,10 @@ function UI.WindowMixin:AddSearch(tab)
     tab = tab or {}
     local win = self
     local name = UI:NextName(win, "Search")
-    local box = CreateFrame("EditBox", name, win.content, "InputBoxTemplate")
-    box:SetSize(win.contentWidth - 8, UI.ROW)
+    local box = CreateFrame("EditBox", name, win, "InputBoxTemplate")
+    box:SetPoint("TOPLEFT", win, "TOPLEFT", 18, -34)
+    box:SetPoint("TOPRIGHT", win, "TOPRIGHT", -18, -34)
+    box:SetHeight(UI.ROW)
     box:SetAutoFocus(false)
     box:SetMaxLetters(tab.maxLetters or 50)
     box.Hint = box:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -35,8 +37,8 @@ function UI.WindowMixin:AddSearch(tab)
     )
 
     box:SetScript("OnEnterPressed", function(sel) sel:ClearFocus() end)
-    UI:Add(win, box, UI.ROW, "", true)
     win.search = box
+    win:SetScrollTop(UI.ROW + UI.SPACING)
 
     return box
 end

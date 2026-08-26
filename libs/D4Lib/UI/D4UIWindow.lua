@@ -1,6 +1,15 @@
 local _, D4 = ...
 local UI = D4.UI
 local windows = 0
+local TOP_INSET = 32
+
+function UI.WindowMixin:SetScrollTop(extra)
+    if self.scrollFrame == nil then return end
+    if self.scrollInset == nil then return end
+    self.scrollFrame:ClearAllPoints()
+    self.scrollFrame:SetPoint("TOPLEFT", self, "TOPLEFT", self.scrollInset.left, -(TOP_INSET + extra))
+    self.scrollFrame:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", self.scrollInset.right, self.scrollInset.bottom)
+end
 
 local function HasModernScroll()
     if ScrollUtil == nil then return false end
@@ -12,8 +21,14 @@ end
 
 local function CreateModernScroll(win, name)
     local scrollBox = CreateFrame("Frame", name .. "ScrollBox", win, "WowScrollBox")
-    scrollBox:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -32)
-    scrollBox:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -28, 22)
+    win.scrollFrame = scrollBox
+    win.scrollInset = {
+        ["left"] = 12,
+        ["right"] = -28,
+        ["bottom"] = 22
+    }
+
+    win:SetScrollTop(0)
     local scrollBar = CreateFrame("EventFrame", name .. "ScrollBar", win, "MinimalScrollBar")
     scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 6, 0)
     scrollBar:SetPoint("BOTTOMLEFT", scrollBox, "BOTTOMRIGHT", 6, 0)
@@ -73,8 +88,14 @@ local function CreateLegacyScroll(win, name)
         scroll = CreateFrame("ScrollFrame", name .. "Scroll", win)
     end
 
-    scroll:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -32)
-    scroll:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -32, 22)
+    win.scrollFrame = scroll
+    win.scrollInset = {
+        ["left"] = 12,
+        ["right"] = -32,
+        ["bottom"] = 22
+    }
+
+    win:SetScrollTop(0)
     local content = CreateFrame("Frame", name .. "Content", scroll)
     content:SetSize(win.contentWidth, 1)
     scroll:SetScrollChild(content)
@@ -100,6 +121,7 @@ function D4:CreateUIWindow(tab)
     win:SetScript("OnDragStop", win.StopMovingOrSizing)
     D4:SetClampedToScreen(win, true)
     if win.TitleText then win.TitleText:SetText(UI:Text(tab.title)) end
+    UI:ApplyWindow(win)
     win.contentWidth = width - 56
     if HasModernScroll() then
         win.content = CreateModernScroll(win, name)
@@ -111,8 +133,8 @@ function D4:CreateUIWindow(tab)
     win.count = 0
     win.search = nil
     win.category = nil
+    win.rootCategory = nil
     win.searching = false
-    UI:ApplyWindow(win)
     if tab.resizable ~= false then MakeResizable(win, name, tab) end
     win:HookScript("OnHide", function() UI:CloseDropdowns() end)
     win:Hide()

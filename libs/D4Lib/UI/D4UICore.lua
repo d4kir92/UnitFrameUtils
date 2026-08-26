@@ -41,11 +41,14 @@ function UI:Add(win, frame, height, label, stretch)
         ["filter"] = win.search ~= nil,
         ["stretch"] = stretch == true,
         ["category"] = win.category,
+        ["depth"] = 0,
         ["isCategory"] = false,
         ["collapsed"] = false,
         ["match"] = true,
         ["selfMatch"] = true,
     }
+
+    if win.category then element.depth = win.category.depth + 1 end
 
     tinsert(win.elements, element)
     frame.uiElement = element
@@ -61,10 +64,24 @@ function UI:CloseDropdowns()
     end
 end
 
+function UI:HasAncestor(element, category)
+    local parent = element.category
+    while parent do
+        if parent == category then return true end
+        parent = parent.category
+    end
+
+    return false
+end
+
 function UI.WindowMixin:IsElementVisible(element)
     if not element.match then return false end
     if self.searching then return true end
-    if element.category and element.category.collapsed then return false end
+    local parent = element.category
+    while parent do
+        if parent.collapsed then return false end
+        parent = parent.category
+    end
 
     return true
 end
@@ -73,8 +90,7 @@ function UI.WindowMixin:Layout()
     local y = -UI.PADDING
     for _, element in ipairs(self.elements) do
         if self:IsElementVisible(element) then
-            local x = UI.PADDING
-            if element.category then x = x + UI.INDENT end
+            local x = UI.PADDING + element.depth * UI.INDENT
             if element.stretch then element.frame:SetWidth(math.max(1, self.contentWidth - x - UI.PADDING)) end
             element.frame:ClearAllPoints()
             element.frame:SetPoint("TOPLEFT", self.content, "TOPLEFT", x, y)
@@ -110,20 +126,22 @@ function UI.WindowMixin:Filter(text)
         element.match = element.selfMatch
     end
 
-    for _, category in ipairs(self.elements) do
-        if category.isCategory and category.selfMatch and self.searching then
-            for _, child in ipairs(self.elements) do
-                if child.category == category then child.match = true end
+    if self.searching then
+        for _, category in ipairs(self.elements) do
+            if category.isCategory and category.selfMatch then
+                for _, child in ipairs(self.elements) do
+                    if UI:HasAncestor(child, category) then child.match = true end
+                end
             end
         end
-    end
 
-    for _, category in ipairs(self.elements) do
-        if category.isCategory and not category.match then
-            for _, child in ipairs(self.elements) do
-                if child.category == category and child.match then
-                    category.match = true
-                    break
+        for _, category in ipairs(self.elements) do
+            if category.isCategory and not category.match then
+                for _, child in ipairs(self.elements) do
+                    if child.match and UI:HasAncestor(child, category) then
+                        category.match = true
+                        break
+                    end
                 end
             end
         end

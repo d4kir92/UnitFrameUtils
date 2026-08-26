@@ -11,14 +11,22 @@ local RAIDICON_TEXTURE = "Interface\\TargetingFrame\\UI-RaidTargetingIcons"
 local RAIDICON_SIZE = 16
 local RAIDICON_OFFSET = 2
 local flagPoint = "TOPRIGHT"
-local flagOffset = 2
-local flagScale = 0.7
-local raidFlagOffset = 2
-local raidFlagScale = 0.7
+local flagOffset = {
+    ["GROUP"] = 2,
+    ["RAID"] = 2
+}
+
+local flagScale = {
+    ["GROUP"] = 0.7,
+    ["RAID"] = 0.7
+}
 local options = {
-    ["SHOWFLAG"] = true,
-    ["FLAGHIDECOMBAT"] = true,
-    ["FLAGHIDEINSTANCE"] = true,
+    ["SHOWFLAGGROUP"] = true,
+    ["FLAGHIDECOMBATGROUP"] = true,
+    ["FLAGHIDEINSTANCEGROUP"] = true,
+    ["SHOWFLAGRAID"] = true,
+    ["FLAGHIDECOMBATRAID"] = true,
+    ["FLAGHIDEINSTANCERAID"] = true,
     ["SHOWITEMLEVEL"] = true,
     ["ILVLHIDECOMBAT"] = true,
     ["ILVLHIDEINSTANCE"] = true,
@@ -54,8 +62,16 @@ local function IsFeatureVisible(showKey, combatKey, instanceKey, raidKey)
     return true
 end
 
+local function GetFlagContext()
+    if IsInRaid() then return "RAID" end
+
+    return "GROUP"
+end
+
 local function IsFlagVisible()
-    return IsFeatureVisible("SHOWFLAG", "FLAGHIDECOMBAT", "FLAGHIDEINSTANCE")
+    local context = GetFlagContext()
+
+    return IsFeatureVisible("SHOWFLAG" .. context, "FLAGHIDECOMBAT" .. context, "FLAGHIDEINSTANCE" .. context)
 end
 
 local function IsItemLevelVisible()
@@ -281,25 +297,13 @@ local function OnInspectReady(guid)
     end
 end
 
-local function GetFlagScale()
-    if IsInRaid() then return raidFlagScale end
-
-    return flagScale
-end
-
-local function GetFlagOffset()
-    if IsInRaid() then return raidFlagOffset end
-
-    return flagOffset
-end
-
 local function ApplyFlagSize(icon)
-    local scale = GetFlagScale()
+    local scale = flagScale[GetFlagContext()]
     icon:SetSize(FLAG_SIZE * scale, FLAG_SIZE * FLAG_CROP * scale)
 end
 
 local function ApplyFlagPosition(icon, frame)
-    local offset = GetFlagOffset()
+    local offset = flagOffset[GetFlagContext()]
     local x, y = offset, offset
     if string.find(flagPoint, "RIGHT") then x = -x end
     if string.find(flagPoint, "TOP") then y = -y end
@@ -369,18 +373,24 @@ function UnitFrameUtils:UpdateRaidFrames()
     end
 end
 
-function UnitFrameUtils:SetRealmFlagPosition(point, offset, raidOffset)
+function UnitFrameUtils:SetRealmFlagPoint(point)
     flagPoint = point or "TOPRIGHT"
-    flagOffset = offset or 2
-    raidFlagOffset = raidOffset or flagOffset
     for frame, overlay in pairs(overlays) do
         ApplyFlagPosition(overlay.flag, frame)
     end
 end
 
-function UnitFrameUtils:SetRealmFlagScale(scale, raidScale)
-    flagScale = scale or 0.7
-    raidFlagScale = raidScale or flagScale
+function UnitFrameUtils:SetRealmFlagOffset(context, offset)
+    if flagOffset[context] == nil then return end
+    flagOffset[context] = offset or 2
+    for frame, overlay in pairs(overlays) do
+        ApplyFlagPosition(overlay.flag, frame)
+    end
+end
+
+function UnitFrameUtils:SetRealmFlagScale(context, scale)
+    if flagScale[context] == nil then return end
+    flagScale[context] = scale or 0.7
     for _, overlay in pairs(overlays) do
         ApplyFlagSize(overlay.flag)
     end

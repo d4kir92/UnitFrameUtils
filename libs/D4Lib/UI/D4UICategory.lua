@@ -20,10 +20,16 @@ function UI.WindowMixin:AddCategory(tab)
     local highlight = header:CreateTexture(nil, "HIGHLIGHT")
     highlight:SetAllPoints(header)
     UI:SetSolidColor(highlight, 1, 1, 1, 0.1)
-    win.category = nil
+    if tab.sub and win.rootCategory then
+        win.category = win.rootCategory
+    else
+        win.category = nil
+    end
+
     local element = UI:Add(win, header, UI.ROW, text, true)
     element.isCategory = true
     element.collapsed = tab.collapsed == true
+    if element.category == nil then win.rootCategory = element end
     win.category = element
     local function UpdateIcon()
         if element.collapsed then

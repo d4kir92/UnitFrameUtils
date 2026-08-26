@@ -65,11 +65,31 @@ win:Show()
 added afterwards belongs to it, is indented, and is hidden while the category is
 collapsed. Clicking the header toggles it. Pass `collapsed = true` to start closed.
 
+Pass `sub = true` for a sub-category: it attaches to the last top-level category
+instead of starting a new one, and its own elements are indented one step further.
+Collapsing the parent hides the sub-category and everything under it.
+
+```lua
+win:AddCategory({label = "LID_FLAG"})
+win:AddCategory({label = "LID_GROUP", sub = true})
+win:AddCheckbox({label = "LID_SHOWFLAG", ...})
+win:AddCategory({label = "LID_RAID", sub = true})
+win:AddCheckbox({label = "LID_SHOWFLAG", ...})
+win:AddCategory({label = "LID_ITEMLEVEL"})
+```
+
+Nesting is one level deep by design; a `sub` category always hangs off the most
+recent top-level one, never off another sub-category.
+
 ## Search
 
-`win:AddSearch()` filters every element that is added **after** it. Elements added
-before the search box are always visible, which is the place for things that must
-never disappear. Matching is case-insensitive against the translated label.
+`win:AddSearch()` pins a search box above the scroll area — it is parented to the
+window itself, not to the scroll content, so it stays put while everything below it
+scrolls. Adding it pushes the scroll area down by one row.
+
+It filters every element that is added **after** it. Elements added before the
+search box are never filtered, which is the place for things that must always stay
+visible. Matching is case-insensitive against the translated label.
 
 Options: `label` (defaults to `LID_SEARCH`), `maxLetters`.
 
