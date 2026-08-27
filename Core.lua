@@ -36,7 +36,8 @@ local options = {
     ["RATINGHIDERAID"] = true,
     ["SHOWLEADER"] = true,
     ["SHOWRAIDICON"] = true,
-    ["RAIDICONHIDECOMBAT"] = false
+    ["RAIDICONHIDECOMBAT"] = false,
+    ["SHOWCOMPANION"] = true
 }
 
 local overlays = {}
@@ -403,6 +404,9 @@ function UnitFrameUtils:SetOption(key, value)
     for frame in pairs(overlays) do
         UpdateFrame(frame)
     end
+
+    if UnitFrameUtils.ApplyCompanionOptions then UnitFrameUtils:ApplyCompanionOptions() end
+    if UnitFrameUtils.UpdateCompanion then UnitFrameUtils:UpdateCompanion() end
 end
 
 function UnitFrameUtils:GetOption(key)

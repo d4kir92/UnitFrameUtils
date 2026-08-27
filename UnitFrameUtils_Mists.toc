@@ -1,5 +1,5 @@
 ## Interface: 50504
-## Version: 0.2.3
+## Version: 0.3.0
 ## Title: UnitFrameUtils |T236373:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
 ## Notes: Adds item level, Mythic+ rating, realm flags, leader and raid target icons to unit and raid frames
 ## Notes-deDE: Fügt Gegenstandsstufe, Mythisch+-Wertung, Realmflaggen, Anführer- und Zielmarkierungssymbole zu Einheiten- und Schlachtzugsfenstern hinzu
@@ -46,4 +46,5 @@ locale\zhCN.lua
 locale\zhTW.lua
 
 Core.lua
+Companion.lua
 Settings.lua

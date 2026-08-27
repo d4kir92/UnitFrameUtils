@@ -7,6 +7,7 @@ local DEFAULT_SCALE = {
 }
 
 local DEFAULT_OFFSET = 2
+local COMPANION_SCALE = 1
 local settings = nil
 local DEFAULT_WIDTH = 460
 local DEFAULT_HEIGHT = 520
@@ -26,7 +27,8 @@ local defaults = {
     ["RATINGHIDERAID"] = true,
     ["SHOWLEADER"] = true,
     ["SHOWRAIDICON"] = true,
-    ["RAIDICONHIDECOMBAT"] = false
+    ["RAIDICONHIDECOMBAT"] = false,
+    ["SHOWCOMPANION"] = true
 }
 
 local function GetTocVersion()
@@ -44,6 +46,7 @@ local function ApplySettings()
         UnitFrameUtils:SetOption(key, UnitFrameUtils:GV(UnitFrameUtilsDB, key, default))
     end
 
+    UnitFrameUtils:SetCompanionScale(UnitFrameUtils:GV(UnitFrameUtilsDB, "COMPANIONSCALE", COMPANION_SCALE))
     UnitFrameUtils:SetRealmFlagPoint(UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGPOINT", "TOPRIGHT"))
     for _, context in ipairs({"GROUP", "RAID"}) do
         UnitFrameUtils:SetRealmFlagScale(context, UnitFrameUtils:GV(UnitFrameUtilsDB, "FLAGSCALE" .. context, DEFAULT_SCALE[context]))
@@ -115,6 +118,18 @@ function UnitFrameUtils:ToggleSettings()
     if settings then settings:Toggle() end
 end
 
+local function HandleSlash(msg)
+    local cmd = strlower(strtrim(msg or ""))
+    if cmd == "companionreset" then
+        UnitFrameUtils:ResetCompanionPosition()
+        UnitFrameUtils:MSG(UnitFrameUtils:Trans("LID_COMPANION"), UnitFrameUtils:Trans("LID_RESET"))
+
+        return
+    end
+
+    UnitFrameUtils:ToggleSettings()
+end
+
 function UnitFrameUtils:InitSettings()
     settings = UnitFrameUtils:CreateUIWindow({
         ["name"] = "UnitFrameUtilsSettings",
@@ -164,6 +179,25 @@ function UnitFrameUtils:InitSettings()
     })
 
     AddToggle("LID_SHOWLEADER", "SHOWLEADER")
+    settings:AddCategory({
+        ["label"] = "LID_COMPANION",
+        ["key"] = "COMPANION"
+    })
+
+    AddToggle("LID_SHOWCOMPANION", "SHOWCOMPANION")
+    settings:AddSlider({
+        ["label"] = "LID_COMPANIONSCALE",
+        ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "COMPANIONSCALE", COMPANION_SCALE),
+        ["min"] = MIN_SCALE,
+        ["max"] = 2,
+        ["step"] = 0.05,
+        ["decimals"] = 2,
+        ["func"] = function(value)
+            UnitFrameUtils:SV(UnitFrameUtilsDB, "COMPANIONSCALE", value)
+            UnitFrameUtils:SetCompanionScale(value)
+        end
+    })
+
     settings:AddCategory({
         ["label"] = "LID_MYTHICRATING",
         ["key"] = "MYTHICRATING"
@@ -231,6 +265,6 @@ loader:SetScript("OnEvent", function()
 
     UnitFrameUtils:InitSettings()
     ApplySettings()
-    UnitFrameUtils:AddSlash("ufu", function() UnitFrameUtils:ToggleSettings() end)
-    UnitFrameUtils:AddSlash("unitframeutils", function() UnitFrameUtils:ToggleSettings() end)
+    UnitFrameUtils:AddSlash("ufu", HandleSlash)
+    UnitFrameUtils:AddSlash("unitframeutils", HandleSlash)
 end)
