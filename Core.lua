@@ -46,6 +46,13 @@ local nextInspect = 0
 local inspectRunning = false
 local StartInspectQueue = nil
 
+local function IsForbiddenFrame(frame)
+    if frame.IsForbidden == nil then return false end
+    local ok, forbidden = pcall(frame.IsForbidden, frame)
+
+    return not ok or forbidden == true
+end
+
 local function IsRaidFrame(name)
     if name == nil then return false end
     if string.find(name, "NamePlate") then return false end
@@ -315,6 +322,7 @@ end
 local function AddOverlay(frame)
     if frame == nil then return end
     if overlays[frame] then return end
+    if IsForbiddenFrame(frame) then return end
     local name = frame:GetName()
     if not IsRaidFrame(name) then return end
     local icon = frame:CreateTexture(name .. ".UFU_Flag", "OVERLAY")
@@ -418,7 +426,11 @@ end
 if _G["CompactUnitFrame_UpdateName"] then
     hooksecurefunc("CompactUnitFrame_UpdateName", function(frame)
         if frame == nil then return end
-        if overlays[frame] == nil then AddOverlay(frame) end
+        if overlays[frame] == nil then
+            if IsForbiddenFrame(frame) then return end
+            AddOverlay(frame)
+        end
+
         UpdateFrame(frame)
     end)
 end
