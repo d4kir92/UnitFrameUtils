@@ -118,6 +118,28 @@ local function GetUnit(frame)
     return unit
 end
 
+local function IsSecret(value)
+    return issecretvalue ~= nil and issecretvalue(value) == true
+end
+
+local function GetSafeGUID(unit)
+    if unit == nil then return nil end
+    local guid = UnitGUID(unit)
+    if guid == nil then return nil end
+    if IsSecret(guid) then return nil end
+
+    return guid
+end
+
+local function IsSameGUID(unit, guid)
+    if guid == nil then return false end
+    if IsSecret(guid) then return false end
+    local unitGUID = GetSafeGUID(unit)
+    if unitGUID == nil then return false end
+
+    return unitGUID == guid
+end
+
 local function GetRealmFlagForUnit(unit)
     local _, realmName = UnitName(unit)
     if realmName == nil or realmName == "" then realmName = GetRealmName() end
@@ -136,7 +158,7 @@ local function GetItemLevelForUnit(unit)
         return nil
     end
 
-    local guid = UnitGUID(unit)
+    local guid = GetSafeGUID(unit)
     if guid == nil then return nil end
     local ilvl = UnitFrameUtils:GetCachedItemLevel(guid)
     if ilvl and ilvl > 0 then return math.floor(ilvl) end
@@ -177,7 +199,7 @@ local function QueueInspect(unit)
     if InCombatLockdown() then return end
     if UnitIsUnit(unit, "player") then return end
     if not CanInspect(unit) then return end
-    local guid = UnitGUID(unit)
+    local guid = GetSafeGUID(unit)
     if guid == nil then return end
     if UnitFrameUtils:GetCachedItemLevel(guid) then return end
     if UnitFrameUtils:GetInspectCache(guid) then return end
@@ -189,7 +211,7 @@ local function RunInspectQueue()
     if IsItemLevelVisible() and not InCombatLockdown() and GetTime() >= nextInspect then
         for guid, unit in pairs(inspectQueue) do
             inspectQueue[guid] = nil
-            if UnitExists(unit) and UnitGUID(unit) == guid and CanInspect(unit) then
+            if UnitExists(unit) and IsSameGUID(unit, guid) and CanInspect(unit) then
                 nextInspect = GetTime() + INSPECT_DELAY
                 UnitFrameUtils:SaveToInspectCache(guid)
                 NotifyInspect(unit)
@@ -278,14 +300,14 @@ end
 local function UpdateByGUID(guid)
     for frame in pairs(overlays) do
         local unit = GetUnit(frame)
-        if unit and UnitGUID(unit) == guid then UpdateInfo(frame) end
+        if unit and IsSameGUID(unit, guid) then UpdateInfo(frame) end
     end
 end
 
 local function FindUnitByGUID(guid)
     for frame in pairs(overlays) do
         local unit = GetUnit(frame)
-        if unit and UnitGUID(unit) == guid then return unit end
+        if unit and IsSameGUID(unit, guid) then return unit end
     end
 
     return nil
@@ -293,6 +315,7 @@ end
 
 local function OnInspectReady(guid)
     if guid == nil then return end
+    if IsSecret(guid) then return end
     if UnitFrameUtils:GetCachedItemLevel(guid) then return end
     local unit = FindUnitByGUID(guid)
     if unit == nil then return end
