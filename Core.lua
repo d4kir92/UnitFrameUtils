@@ -37,7 +37,8 @@ local options = {
     ["SHOWLEADER"] = true,
     ["SHOWRAIDICON"] = true,
     ["RAIDICONHIDECOMBAT"] = false,
-    ["SHOWCOMPANION"] = true
+    ["SHOWCOMPANION"] = true,
+    ["SHOWCOMPANIONNOTFULL"] = false
 }
 
 local overlays = {}
@@ -108,18 +109,40 @@ local function ApplyLeaderTexture(icon)
     icon:SetTexture(LEADER_TEXTURE)
 end
 
+local function IsSecret(value)
+    return issecretvalue ~= nil and issecretvalue(value) == true
+end
+
+function UnitFrameUtils:IsSecret(value)
+    return IsSecret(value)
+end
+
+function UnitFrameUtils:SafeBool(func, ...)
+    if func == nil then return nil end
+    local ok, value = pcall(func, ...)
+    if not ok then return nil end
+    if IsSecret(value) then return nil end
+
+    return value == true
+end
+
+function UnitFrameUtils:UnitExists(unit)
+    if unit == nil then return false end
+    local ok, exists = pcall(UnitExists, unit)
+    if not ok then return false end
+    if IsSecret(exists) then return true end
+
+    return exists == true
+end
+
 local function GetUnit(frame)
     if frame == nil then return nil end
     local unit = frame.displayedUnit or frame.unit
     if unit == nil then return nil end
-    if not UnitExists(unit) then return nil end
-    if not UnitIsPlayer(unit) then return nil end
+    if not UnitFrameUtils:UnitExists(unit) then return nil end
+    if UnitFrameUtils:SafeBool(UnitIsPlayer, unit) ~= true then return nil end
 
     return unit
-end
-
-local function IsSecret(value)
-    return issecretvalue ~= nil and issecretvalue(value) == true
 end
 
 local function GetSafeGUID(unit)
@@ -211,7 +234,7 @@ local function RunInspectQueue()
     if IsItemLevelVisible() and not InCombatLockdown() and GetTime() >= nextInspect then
         for guid, unit in pairs(inspectQueue) do
             inspectQueue[guid] = nil
-            if UnitExists(unit) and IsSameGUID(unit, guid) and CanInspect(unit) then
+            if UnitFrameUtils:UnitExists(unit) and IsSameGUID(unit, guid) and CanInspect(unit) then
                 nextInspect = GetTime() + INSPECT_DELAY
                 UnitFrameUtils:SaveToInspectCache(guid)
                 NotifyInspect(unit)

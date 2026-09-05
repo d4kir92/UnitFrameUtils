@@ -28,7 +28,8 @@ local defaults = {
     ["SHOWLEADER"] = true,
     ["SHOWRAIDICON"] = true,
     ["RAIDICONHIDECOMBAT"] = false,
-    ["SHOWCOMPANION"] = true
+    ["SHOWCOMPANION"] = true,
+    ["SHOWCOMPANIONNOTFULL"] = false
 }
 
 local function GetTocVersion()
@@ -185,6 +186,7 @@ function UnitFrameUtils:InitSettings()
     })
 
     AddToggle("LID_SHOWCOMPANION", "SHOWCOMPANION")
+    AddToggle("LID_SHOWCOMPANIONNOTFULL", "SHOWCOMPANIONNOTFULL")
     settings:AddSlider({
         ["label"] = "LID_COMPANIONSCALE",
         ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "COMPANIONSCALE", COMPANION_SCALE),

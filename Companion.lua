@@ -105,7 +105,7 @@ local function GetReadableName(unit)
         return value
     end)
 
-    if ok and type(name) == "string" then return name end
+    if ok and not UnitFrameUtils:IsSecret(name) and type(name) == "string" then return name end
     return nil
 end
 
@@ -164,15 +164,12 @@ end
 
 local function IsCompanionUnit(unit)
     if unit == nil then return false end
-    if not UnitExists(unit) then return false end
-    if UnitIsPlayer(unit) then return false end
-    if UnitIsUnit(unit, "player") then return false end
-    if UnitInPartyIsAI then
-        local ok, isAI = pcall(UnitInPartyIsAI, unit)
-        if ok and isAI == true then
-            LearnNpcID(unit)
-            return true
-        end
+    if not UnitFrameUtils:UnitExists(unit) then return false end
+    if UnitFrameUtils:SafeBool(UnitIsPlayer, unit) == true then return false end
+    if UnitFrameUtils:SafeBool(UnitIsUnit, unit, "player") == true then return false end
+    if UnitInPartyIsAI and UnitFrameUtils:SafeBool(UnitInPartyIsAI, unit) == true then
+        LearnNpcID(unit)
+        return true
     end
 
     if IsKnownNpcID(unit) then return true end
@@ -228,8 +225,8 @@ local function MemberShowsUnit(member, unit)
     if not member:IsShown() then return false end
     local memberUnit = member.displayedUnit or member.unit
     if memberUnit == nil then return false end
-    if not UnitExists(memberUnit) then return false end
-    return UnitIsUnit(memberUnit, unit) == true
+    if not UnitFrameUtils:UnitExists(memberUnit) then return false end
+    return UnitFrameUtils:SafeBool(UnitIsUnit, memberUnit, unit) == true
 end
 
 local function IsShownByBlizzard(unit)
@@ -239,6 +236,12 @@ local function IsShownByBlizzard(unit)
         if PartyFrame and MemberShowsUnit(PartyFrame["MemberFrame" .. i], unit) then return true end
     end
     return false
+end
+
+local function IsBlockedByBlizzard(unit)
+    if UnitFrameUtils:GetOption("SHOWCOMPANIONNOTFULL") == true then return false end
+
+    return IsShownByBlizzard(unit)
 end
 
 local function ShouldHideFocusFrame()
@@ -688,6 +691,7 @@ local function QueryRole(unit)
     if UnitGroupRolesAssigned == nil then return nil end
     local ok, role = pcall(UnitGroupRolesAssigned, unit)
     if not ok then return nil end
+    if UnitFrameUtils:IsSecret(role) then return nil end
     if role == nil or role == "NONE" then return nil end
     return role
 end
@@ -697,12 +701,9 @@ local function GetUnitRole(unit)
     if role then return role end
     for i = 1, PARTY_SLOTS do
         local partyUnit = "party" .. i
-        if UnitExists(partyUnit) then
-            local ok, same = pcall(UnitIsUnit, partyUnit, unit)
-            if ok and same == true then
-                role = QueryRole(partyUnit)
-                if role then return role end
-            end
+        if UnitFrameUtils:UnitExists(partyUnit) and UnitFrameUtils:SafeBool(UnitIsUnit, partyUnit, unit) == true then
+            role = QueryRole(partyUnit)
+            if role then return role end
         end
     end
     return nil
@@ -837,7 +838,7 @@ end
 
 function UpdateVisuals(unit)
     if frame == nil then return end
-    if unit == nil or not UnitExists(unit) then return end
+    if unit == nil or not UnitFrameUtils:UnitExists(unit) then return end
     pcall(UpdateName, unit)
     pcall(UpdateRole, unit)
     pcall(UpdateHealth, unit)
@@ -855,7 +856,7 @@ function UnitFrameUtils:UpdateCompanion()
     local unit, secure = nil, false
     if HasCompanionContext() then unit, secure = ResolveCompanionUnit() end
     if unit then companionGUID = UnitGUID(unit) end
-    if unit == nil or UnitFrameUtils:GetOption("SHOWCOMPANION") ~= true or IsShownByBlizzard(unit) then
+    if unit == nil or UnitFrameUtils:GetOption("SHOWCOMPANION") ~= true or IsBlockedByBlizzard(unit) then
         currentUnit = nil
         ApplySecure(nil, false)
         SetShown(false)
