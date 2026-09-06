@@ -128,6 +128,12 @@ local function HandleSlash(msg)
         return
     end
 
+    if cmd == "taint" then
+        UnitFrameUtils:ReportTaint()
+
+        return
+    end
+
     UnitFrameUtils:ToggleSettings()
 end
 

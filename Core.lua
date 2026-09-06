@@ -469,6 +469,66 @@ function UnitFrameUtils:GetOption(key)
     return options[key]
 end
 
+local TAINT_FIELDS = {"unit", "displayedUnit", "menu", "healthBar", "powerBar", "name", "optionTable"}
+local TAINT_GLOBALS = {"SetRaidTarget", "SetRaidTargetIcon", "SetRaidTargetIconTexture", "CompactUnitFrame_UpdateName", "CompactUnitFrame_SetUnit", "CompactUnitFrame_OnLoad", "SecureUnitButton_OnClick", "UnitPopup_OpenMenu", "UnitPopup_ShowMenu", "ToggleDropDownMenu"}
+local TAINT_MAX_LINES = 40
+
+local function ReportInsecure(state, label, ...)
+    if state.lines >= TAINT_MAX_LINES then return false end
+    local ok, secure, owner = pcall(issecurevariable, ...)
+    if not ok then return false end
+    if secure ~= false then return false end
+    state.lines = state.lines + 1
+    UnitFrameUtils:MSG("|cffff4040TAINT|r " .. label .. " |cffffff00<-|r " .. tostring(owner))
+
+    return true
+end
+
+local function ReportFrameTaint(state, name)
+    local frame = _G[name]
+    if frame == nil then return end
+    if IsForbiddenFrame(frame) then return end
+    state.frames = state.frames + 1
+    ReportInsecure(state, "_G." .. name, name)
+    for _, field in ipairs(TAINT_FIELDS) do
+        ReportInsecure(state, name .. "." .. field, frame, field)
+    end
+end
+
+function UnitFrameUtils:ReportTaint()
+    if issecurevariable == nil then
+        UnitFrameUtils:MSG("issecurevariable is not available on this client")
+
+        return
+    end
+
+    local state = {
+        ["lines"] = 0,
+        ["frames"] = 0
+    }
+
+    for _, name in ipairs(TAINT_GLOBALS) do
+        ReportInsecure(state, name, name)
+    end
+
+    for i = 1, 40 do
+        ReportFrameTaint(state, "CompactRaidFrame" .. i)
+        if i <= 5 then ReportFrameTaint(state, "CompactPartyFrameMember" .. i) end
+        if i <= 8 then
+            for x = 1, 5 do
+                ReportFrameTaint(state, "CompactRaidGroup" .. i .. "Member" .. x)
+            end
+        end
+    end
+
+    ReportFrameTaint(state, "CompactPartyFrame")
+    ReportFrameTaint(state, "CompactRaidFrameContainer")
+    ReportFrameTaint(state, "TargetFrame")
+    ReportFrameTaint(state, "FocusFrame")
+    if state.lines >= TAINT_MAX_LINES then UnitFrameUtils:MSG("output truncated at " .. TAINT_MAX_LINES .. " lines") end
+    UnitFrameUtils:MSG("taint scan done: " .. state.frames .. " frames, " .. state.lines .. " insecure values")
+end
+
 if _G["CompactUnitFrame_UpdateName"] then
     hooksecurefunc("CompactUnitFrame_UpdateName", function(frame)
         if frame == nil then return end
