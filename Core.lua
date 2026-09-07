@@ -117,6 +117,14 @@ function UnitFrameUtils:IsSecret(value)
     return IsSecret(value)
 end
 
+local function SafeNumber(value)
+    if value == nil then return nil end
+    if IsSecret(value) then return nil end
+    if type(value) ~= "number" then return nil end
+
+    return value
+end
+
 function UnitFrameUtils:SafeBool(func, ...)
     if func == nil then return nil end
     local ok, value = pcall(func, ...)
@@ -164,7 +172,8 @@ local function IsSameGUID(unit, guid)
 end
 
 local function GetRealmFlagForUnit(unit)
-    local _, realmName = UnitName(unit)
+    local ok, _, realmName = pcall(UnitName, unit)
+    if not ok or IsSecret(realmName) then realmName = nil end
     if realmName == nil or realmName == "" then realmName = GetRealmName() end
     if realmName == nil then return nil end
     local lang = UnitFrameUtils:GetRealmFlag(realmName)
@@ -174,7 +183,7 @@ local function GetRealmFlagForUnit(unit)
 end
 
 local function GetItemLevelForUnit(unit)
-    if UnitIsUnit(unit, "player") then
+    if UnitFrameUtils:SafeBool(UnitIsUnit, unit, "player") == true then
         local _, equipped = GetAverageItemLevel()
         if equipped and equipped > 0 then return math.floor(equipped) end
 
@@ -192,9 +201,9 @@ end
 local function GetRatingForUnit(unit)
     if C_PlayerInfo == nil then return nil end
     if C_PlayerInfo.GetPlayerMythicPlusRatingSummary == nil then return nil end
-    local summary = C_PlayerInfo.GetPlayerMythicPlusRatingSummary(unit)
-    if summary == nil then return nil end
-    local score = summary.currentSeasonScore
+    local ok, summary = pcall(C_PlayerInfo.GetPlayerMythicPlusRatingSummary, unit)
+    if not ok or summary == nil or IsSecret(summary) then return nil end
+    local score = SafeNumber(summary.currentSeasonScore)
     if score == nil or score <= 0 then return nil end
 
     return score
@@ -220,8 +229,8 @@ end
 local function QueueInspect(unit)
     if not IsItemLevelVisible() then return end
     if InCombatLockdown() then return end
-    if UnitIsUnit(unit, "player") then return end
-    if not CanInspect(unit) then return end
+    if UnitFrameUtils:SafeBool(UnitIsUnit, unit, "player") == true then return end
+    if UnitFrameUtils:SafeBool(CanInspect, unit) ~= true then return end
     local guid = GetSafeGUID(unit)
     if guid == nil then return end
     if UnitFrameUtils:GetCachedItemLevel(guid) then return end
@@ -234,7 +243,7 @@ local function RunInspectQueue()
     if IsItemLevelVisible() and not InCombatLockdown() and GetTime() >= nextInspect then
         for guid, unit in pairs(inspectQueue) do
             inspectQueue[guid] = nil
-            if UnitFrameUtils:UnitExists(unit) and IsSameGUID(unit, guid) and CanInspect(unit) then
+            if UnitFrameUtils:UnitExists(unit) and IsSameGUID(unit, guid) and UnitFrameUtils:SafeBool(CanInspect, unit) == true then
                 nextInspect = GetTime() + INSPECT_DELAY
                 UnitFrameUtils:SaveToInspectCache(guid)
                 NotifyInspect(unit)
@@ -292,7 +301,7 @@ local function UpdateLeader(frame)
     local overlay = overlays[frame]
     if overlay == nil then return end
     local unit = GetUnit(frame)
-    if unit and IsLeaderVisible() and UnitIsGroupLeader(unit) then
+    if unit and IsLeaderVisible() and UnitFrameUtils:SafeBool(UnitIsGroupLeader, unit) == true then
         overlay.leader:Show()
     else
         overlay.leader:Hide()
@@ -304,7 +313,11 @@ local function UpdateRaidIcon(frame)
     if overlay == nil then return end
     local unit = GetUnit(frame)
     local index = nil
-    if unit and IsRaidIconVisible() then index = GetRaidTargetIndex(unit) end
+    if unit and IsRaidIconVisible() then
+        local ok, value = pcall(GetRaidTargetIndex, unit)
+        if ok and not IsSecret(value) then index = value end
+    end
+
     if index and SetRaidTargetIconTexture then
         SetRaidTargetIconTexture(overlay.raidIcon, index)
         overlay.raidIcon:Show()
@@ -343,8 +356,16 @@ local function OnInspectReady(guid)
     local unit = FindUnitByGUID(guid)
     if unit == nil then return end
     local ilvl = nil
-    if C_PaperDollInfo and C_PaperDollInfo.GetInspectItemLevel then ilvl = C_PaperDollInfo.GetInspectItemLevel(unit) end
-    if ilvl == nil or ilvl <= 0 then ilvl = UnitFrameUtils:GetInspectILvl(unit) end
+    if C_PaperDollInfo and C_PaperDollInfo.GetInspectItemLevel then
+        local ok, value = pcall(C_PaperDollInfo.GetInspectItemLevel, unit)
+        if ok then ilvl = SafeNumber(value) end
+    end
+
+    if ilvl == nil or ilvl <= 0 then
+        local ok, value = pcall(UnitFrameUtils.GetInspectILvl, UnitFrameUtils, unit)
+        ilvl = ok and SafeNumber(value) or nil
+    end
+
     if ilvl and ilvl > 0 then
         UnitFrameUtils:SaveToItemLevelCache(guid, ilvl)
         UpdateByGUID(guid)
