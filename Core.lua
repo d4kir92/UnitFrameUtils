@@ -110,11 +110,7 @@ local function ApplyLeaderTexture(icon)
 end
 
 local function IsSecret(value)
-    return issecretvalue ~= nil and issecretvalue(value) == true
-end
-
-function UnitFrameUtils:IsSecret(value)
-    return IsSecret(value)
+    return UnitFrameUtils:IsSecret(value)
 end
 
 local function SafeNumber(value)
@@ -308,21 +304,43 @@ local function UpdateLeader(frame)
     end
 end
 
+local function ApplySecretRaidIcon(icon, index)
+    if not pcall(SetRaidTargetIconTexture, icon, index) then return false end
+    if not pcall(function() icon:SetShown(index ~= nil) end) then icon:Show() end
+
+    return true
+end
+
 local function UpdateRaidIcon(frame)
     local overlay = overlays[frame]
     if overlay == nil then return end
-    local unit = GetUnit(frame)
-    local index = nil
-    if unit and IsRaidIconVisible() then
-        local ok, value = pcall(GetRaidTargetIndex, unit)
-        if ok and not IsSecret(value) then index = value end
+    local icon = overlay.raidIcon
+    local unit = nil
+    if IsRaidIconVisible() then unit = GetUnit(frame) end
+    if unit == nil or SetRaidTargetIconTexture == nil then
+        icon:Hide()
+
+        return
     end
 
-    if index and SetRaidTargetIconTexture then
-        SetRaidTargetIconTexture(overlay.raidIcon, index)
-        overlay.raidIcon:Show()
+    local ok, index = pcall(GetRaidTargetIndex, unit)
+    if not ok then
+        icon:Hide()
+
+        return
+    end
+
+    if IsSecret(index) then
+        if not ApplySecretRaidIcon(icon, index) then icon:Hide() end
+
+        return
+    end
+
+    if index then
+        SetRaidTargetIconTexture(icon, index)
+        icon:Show()
     else
-        overlay.raidIcon:Hide()
+        icon:Hide()
     end
 end
 
@@ -514,6 +532,54 @@ local function ReportFrameTaint(state, name)
     for _, field in ipairs(TAINT_FIELDS) do
         ReportInsecure(state, name .. "." .. field, frame, field)
     end
+end
+
+local probeIcon = nil
+
+local function GetProbeIcon()
+    if probeIcon == nil then
+        local probeFrame = CreateFrame("Frame")
+        probeFrame:Hide()
+        probeIcon = probeFrame:CreateTexture(nil, "OVERLAY")
+        probeIcon:SetTexture(RAIDICON_TEXTURE)
+    end
+
+    return probeIcon
+end
+
+function UnitFrameUtils:ReportRaidIcon()
+    UnitFrameUtils:MSG("SetRaidTargetIconTexture: " .. tostring(SetRaidTargetIconTexture ~= nil) .. "  issecretvalue: " .. tostring(issecretvalue ~= nil))
+    local probe = GetProbeIcon()
+    local units = {"player", "target", "focus"}
+    for i = 1, 4 do
+        tinsert(units, "party" .. i)
+    end
+
+    for i = 1, 40 do
+        tinsert(units, "raid" .. i)
+    end
+
+    local lines = 0
+    for _, unit in ipairs(units) do
+        if lines < 12 and UnitFrameUtils:UnitExists(unit) then
+            local ok, index = pcall(GetRaidTargetIndex, unit)
+            local state
+            if not ok then
+                state = "|cffff4040call failed|r"
+            elseif IsSecret(index) then
+                local okTexture = pcall(SetRaidTargetIconTexture, probe, index)
+                local okShown = pcall(function() probe:SetShown(index ~= nil) end)
+                state = "|cffffff00secret|r  texture:" .. tostring(okTexture) .. "  setshown:" .. tostring(okShown)
+            else
+                state = tostring(index)
+            end
+
+            lines = lines + 1
+            UnitFrameUtils:MSG(unit .. " |cffffff00->|r " .. state)
+        end
+    end
+
+    if lines == 0 then UnitFrameUtils:MSG("no units found") end
 end
 
 function UnitFrameUtils:ReportTaint()

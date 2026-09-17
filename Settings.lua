@@ -134,6 +134,12 @@ local function HandleSlash(msg)
         return
     end
 
+    if cmd == "marker" then
+        UnitFrameUtils:ReportRaidIcon()
+
+        return
+    end
+
     UnitFrameUtils:ToggleSettings()
 end
 
