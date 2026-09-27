@@ -548,7 +548,7 @@ local function GetProbeIcon()
 end
 
 function UnitFrameUtils:ReportRaidIcon()
-    UnitFrameUtils:MSG("SetRaidTargetIconTexture: " .. tostring(SetRaidTargetIconTexture ~= nil) .. "  issecretvalue: " .. tostring(issecretvalue ~= nil))
+    UnitFrameUtils:MSG("SetRaidTargetIconTexture: " .. tostring(SetRaidTargetIconTexture ~= nil) .. "  IsSecret: " .. tostring(type(UnitFrameUtils.IsSecret) == "function"))
     local probe = GetProbeIcon()
     local units = {"player", "target", "focus"}
     for i = 1, 4 do
