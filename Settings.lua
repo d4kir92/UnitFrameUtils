@@ -1,5 +1,5 @@
 local _, UnitFrameUtils = ...
-local ICON = 236373
+local ICON = UnitFrameUtils:GetAddonIcon()
 local MIN_SCALE = 0.2
 local DEFAULT_SCALE = {
     ["GROUP"] = 0.7,
@@ -31,12 +31,6 @@ local defaults = {
     ["SHOWCOMPANION"] = true,
     ["SHOWCOMPANIONNOTFULL"] = false
 }
-
-local function GetTocVersion()
-    if C_AddOns and C_AddOns.GetAddOnMetadata then return C_AddOns.GetAddOnMetadata("UnitFrameUtils", "Version") end
-    if GetAddOnMetadata then return GetAddOnMetadata("UnitFrameUtils", "Version") end
-    return "0.0.0"
-end
 
 local function ShowMinimapButtonDefault()
     return UnitFrameUtils:GetWoWBuild() ~= "RETAIL"
@@ -157,7 +151,7 @@ function UnitFrameUtils:InitSettings()
         end,
         ["getCollapsed"] = function(key) return GetCollapsed(key) end,
         ["setCollapsed"] = function(key, collapsed) SetCollapsed(key, collapsed) end,
-        ["title"] = format("|T236373:16:16:0:0|t UnitFrameUtils v%s", GetTocVersion())
+        ["title"] = format("|T%s:16:16:0:0|t UnitFrameUtils v%s", ICON, UnitFrameUtils:GetAddonVersion())
     })
 
     settings:AddSearch()
@@ -262,14 +256,14 @@ local loader = CreateFrame("Frame", "UnitFrameUtilsSettingsLoader")
 UnitFrameUtils:RegisterEvent(loader, "PLAYER_LOGIN")
 loader:SetScript("OnEvent", function()
     UnitFrameUtilsDB = UnitFrameUtilsDB or {}
-    UnitFrameUtils:SetVersion(ICON, GetTocVersion())
-    UnitFrameUtils:SetAddonOutput("UnitFrameUtils", ICON)
+    UnitFrameUtils:SetVersion()
+    UnitFrameUtils:SetAddonOutput()
     UnitFrameUtils:CreateMinimapButton({
         ["name"] = "UnitFrameUtils",
         ["icon"] = ICON,
         ["dbtab"] = UnitFrameUtilsDB,
         ["dbkey"] = "SHOWMINIMAPBUTTON",
-        ["vTT"] = {{"|T236373:16:16:0:0|t UnitFrameUtils", "v" .. GetTocVersion()}, {UnitFrameUtils:Trans("LID_LEFTCLICK"), UnitFrameUtils:Trans("LID_OPENSETTINGS")}, {UnitFrameUtils:Trans("LID_RIGHTCLICK"), UnitFrameUtils:Trans("LID_HIDEMINIMAPBUTTON")}},
+        ["vTT"] = {{format("|T%s:16:16:0:0|t UnitFrameUtils", ICON), "v" .. UnitFrameUtils:GetAddonVersion()}, {UnitFrameUtils:Trans("LID_LEFTCLICK"), UnitFrameUtils:Trans("LID_OPENSETTINGS")}, {UnitFrameUtils:Trans("LID_RIGHTCLICK"), UnitFrameUtils:Trans("LID_HIDEMINIMAPBUTTON")}},
         ["funcL"] = function() UnitFrameUtils:ToggleSettings() end,
         ["funcR"] = function()
             UnitFrameUtils:SV(UnitFrameUtilsDB, "SHOWMINIMAPBUTTON", false)
