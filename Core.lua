@@ -78,6 +78,7 @@ local function GetFlagContext()
 end
 
 local function IsFlagVisible()
+    if UnitFrameUtils:IsForever() then return false end
     local context = GetFlagContext()
 
     return IsFeatureVisible("SHOWFLAG" .. context, "FLAGHIDECOMBAT" .. context, "FLAGHIDEINSTANCE" .. context)

@@ -223,33 +223,35 @@ function UnitFrameUtils:InitSettings()
     AddToggle("LID_SHOWITEMLEVEL", "SHOWITEMLEVEL")
     AddToggle("LID_HIDEINCOMBAT", "ILVLHIDECOMBAT")
     AddToggle("LID_HIDEININSTANCE", "ILVLHIDEINSTANCE")
-    settings:AddCategory({
-        ["label"] = "LID_FLAG",
-        ["key"] = "FLAG"
-    })
+    if not UnitFrameUtils:IsForever() then
+        settings:AddCategory({
+            ["label"] = "LID_FLAG",
+            ["key"] = "FLAG"
+        })
 
-    settings:AddCategory({
-        ["label"] = "LID_GROUP",
-        ["key"] = "FLAGGROUP",
-        ["sub"] = true
-    })
+        settings:AddCategory({
+            ["label"] = "LID_GROUP",
+            ["key"] = "FLAGGROUP",
+            ["sub"] = true
+        })
 
-    AddToggle("LID_SHOWFLAG", "SHOWFLAGGROUP")
-    AddToggle("LID_HIDEINCOMBAT", "FLAGHIDECOMBATGROUP")
-    AddToggle("LID_HIDEININSTANCE", "FLAGHIDEINSTANCEGROUP")
-    AddScaleSlider("LID_FLAGSCALE", "FLAGSCALEGROUP", "GROUP")
-    AddOffsetSlider("LID_FLAGOFFSET", "FLAGOFFSETGROUP")
-    settings:AddCategory({
-        ["label"] = "LID_RAID",
-        ["key"] = "FLAGRAID",
-        ["sub"] = true
-    })
+        AddToggle("LID_SHOWFLAG", "SHOWFLAGGROUP")
+        AddToggle("LID_HIDEINCOMBAT", "FLAGHIDECOMBATGROUP")
+        AddToggle("LID_HIDEININSTANCE", "FLAGHIDEINSTANCEGROUP")
+        AddScaleSlider("LID_FLAGSCALE", "FLAGSCALEGROUP", "GROUP")
+        AddOffsetSlider("LID_FLAGOFFSET", "FLAGOFFSETGROUP")
+        settings:AddCategory({
+            ["label"] = "LID_RAID",
+            ["key"] = "FLAGRAID",
+            ["sub"] = true
+        })
 
-    AddToggle("LID_SHOWFLAG", "SHOWFLAGRAID")
-    AddToggle("LID_HIDEINCOMBAT", "FLAGHIDECOMBATRAID")
-    AddToggle("LID_HIDEININSTANCE", "FLAGHIDEINSTANCERAID")
-    AddScaleSlider("LID_FLAGSCALE", "FLAGSCALERAID", "RAID")
-    AddOffsetSlider("LID_FLAGOFFSET", "FLAGOFFSETRAID")
+        AddToggle("LID_SHOWFLAG", "SHOWFLAGRAID")
+        AddToggle("LID_HIDEINCOMBAT", "FLAGHIDECOMBATRAID")
+        AddToggle("LID_HIDEININSTANCE", "FLAGHIDEINSTANCERAID")
+        AddScaleSlider("LID_FLAGSCALE", "FLAGSCALERAID", "RAID")
+        AddOffsetSlider("LID_FLAGOFFSET", "FLAGOFFSETRAID")
+    end
 end
 
 local loader = CreateFrame("Frame", "UnitFrameUtilsSettingsLoader")
