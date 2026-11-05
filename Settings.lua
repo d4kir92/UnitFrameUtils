@@ -29,14 +29,41 @@ local defaults = {
     ["SHOWRAIDICON"] = true,
     ["RAIDICONHIDECOMBAT"] = false,
     ["SHOWCOMPANION"] = true,
-    ["SHOWCOMPANIONNOTFULL"] = false
+    ["SHOWCOMPANIONNOTFULL"] = false,
+    ["SHOWHOTPREDICTION"] = true,
+    ["SHOWHOTPREDICTIONPRD"] = true,
+    ["SHOWHOTPREDICTIONUNIT"] = true,
+    ["HOTCUSTOMCOLOR"] = false
+}
+
+local DEFAULT_HOTCOLOR = {
+    ["r"] = 11 / 255,
+    ["g"] = 136 / 255,
+    ["b"] = 105 / 255,
+    ["a"] = 1
 }
 
 local function ShowMinimapButtonDefault()
     return UnitFrameUtils:GetWoWBuild() ~= "RETAIL"
 end
 
+local function HasDelveCompanion()
+    return UnitFrameUtils:GetWoWBuildNr() >= 110000
+end
+
+local function HasMythicPlus()
+    return not UnitFrameUtils:IsForever() and UnitFrameUtils:GetWoWBuildNr() >= 50000
+end
+
+local function GetHotColor()
+    local color = UnitFrameUtils:GV(UnitFrameUtilsDB, "HOTCOLOR", DEFAULT_HOTCOLOR)
+    if type(color) ~= "table" then color = DEFAULT_HOTCOLOR end
+
+    return color.r or DEFAULT_HOTCOLOR.r, color.g or DEFAULT_HOTCOLOR.g, color.b or DEFAULT_HOTCOLOR.b, color.a or DEFAULT_HOTCOLOR.a
+end
+
 local function ApplySettings()
+    if UnitFrameUtils.SetHotColor then UnitFrameUtils:SetHotColor(GetHotColor()) end
     for key, default in pairs(defaults) do
         UnitFrameUtils:SetOption(key, UnitFrameUtils:GV(UnitFrameUtilsDB, key, default))
     end
@@ -98,15 +125,49 @@ local function SetCollapsed(key, collapsed)
     end
 end
 
-local function AddToggle(label, key)
-    settings:AddCheckbox({
+local function AddToggle(label, key, added, onChange)
+    return settings:AddCheckbox({
         ["label"] = label,
+        ["added"] = added,
         ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, key, defaults[key]),
         ["func"] = function(value)
             UnitFrameUtils:SV(UnitFrameUtilsDB, key, value)
             UnitFrameUtils:SetOption(key, value)
+            if onChange then onChange(value) end
         end
     })
+end
+
+local function AddHotColorSettings()
+    local customColor = AddToggle("LID_HOTCUSTOMCOLOR", "HOTCUSTOMCOLOR", "2026-11-05", function() settings:UpdateDependencies() end)
+    local r, g, b, a = GetHotColor()
+    local picker = settings:AddColorPicker({
+        ["label"] = "LID_HOTCOLOR",
+        ["added"] = "2026-11-05",
+        ["value"] = {
+            ["r"] = r,
+            ["g"] = g,
+            ["b"] = b,
+            ["a"] = a
+        },
+        ["func"] = function(red, green, blue, alpha)
+            UnitFrameUtils:SV(
+                UnitFrameUtilsDB,
+                "HOTCOLOR",
+                {
+                    ["r"] = red,
+                    ["g"] = green,
+                    ["b"] = blue,
+                    ["a"] = alpha
+                }
+            )
+
+            if UnitFrameUtils.SetHotColor then UnitFrameUtils:SetHotColor(red, green, blue, alpha) end
+        end
+    })
+
+    settings:AddDependency(picker, function() return UnitFrameUtils:GV(UnitFrameUtilsDB, "HOTCUSTOMCOLOR", defaults["HOTCUSTOMCOLOR"]) == true end)
+    settings:AddRequirement(picker, customColor)
 end
 
 function UnitFrameUtils:ToggleSettings()
@@ -130,6 +191,18 @@ local function HandleSlash(msg)
 
     if cmd == "marker" then
         UnitFrameUtils:ReportRaidIcon()
+
+        return
+    end
+
+    if cmd == "debug" and UnitFrameUtils.ToggleHotColorDebug then
+        UnitFrameUtils:ToggleHotColorDebug()
+
+        return
+    end
+
+    if cmd == "hot" and UnitFrameUtils.ToggleHotDebug then
+        UnitFrameUtils:ToggleHotDebug()
 
         return
     end
@@ -186,35 +259,53 @@ function UnitFrameUtils:InitSettings()
     })
 
     AddToggle("LID_SHOWLEADER", "SHOWLEADER")
-    settings:AddCategory({
-        ["label"] = "LID_COMPANION",
-        ["key"] = "COMPANION"
-    })
+    if UnitFrameUtils:IsForever() then
+        settings:AddCategory({
+            ["label"] = "LID_HOTPREDICTION",
+            ["key"] = "HOTPREDICTION",
+            ["added"] = "2026-11-05"
+        })
 
-    AddToggle("LID_SHOWCOMPANION", "SHOWCOMPANION")
-    AddToggle("LID_SHOWCOMPANIONNOTFULL", "SHOWCOMPANIONNOTFULL")
-    settings:AddSlider({
-        ["label"] = "LID_COMPANIONSCALE",
-        ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "COMPANIONSCALE", COMPANION_SCALE),
-        ["min"] = MIN_SCALE,
-        ["max"] = 2,
-        ["step"] = 0.05,
-        ["decimals"] = 2,
-        ["func"] = function(value)
-            UnitFrameUtils:SV(UnitFrameUtilsDB, "COMPANIONSCALE", value)
-            UnitFrameUtils:SetCompanionScale(value)
-        end
-    })
+        AddToggle("LID_SHOWHOTPREDICTION", "SHOWHOTPREDICTION", "2026-11-05")
+        AddToggle("LID_SHOWHOTPREDICTIONPRD", "SHOWHOTPREDICTIONPRD", "2026-11-05")
+        AddToggle("LID_SHOWHOTPREDICTIONUNIT", "SHOWHOTPREDICTIONUNIT", "2026-11-05")
+        AddHotColorSettings()
+    end
 
-    settings:AddCategory({
-        ["label"] = "LID_MYTHICRATING",
-        ["key"] = "MYTHICRATING"
-    })
+    if HasDelveCompanion() then
+        settings:AddCategory({
+            ["label"] = "LID_COMPANION",
+            ["key"] = "COMPANION"
+        })
 
-    AddToggle("LID_SHOWMYTHICRATING", "SHOWMYTHICRATING")
-    AddToggle("LID_HIDEINCOMBAT", "RATINGHIDECOMBAT")
-    AddToggle("LID_HIDEININSTANCE", "RATINGHIDEINSTANCE")
-    AddToggle("LID_HIDEINRAID", "RATINGHIDERAID")
+        AddToggle("LID_SHOWCOMPANION", "SHOWCOMPANION")
+        AddToggle("LID_SHOWCOMPANIONNOTFULL", "SHOWCOMPANIONNOTFULL")
+        settings:AddSlider({
+            ["label"] = "LID_COMPANIONSCALE",
+            ["value"] = UnitFrameUtils:GV(UnitFrameUtilsDB, "COMPANIONSCALE", COMPANION_SCALE),
+            ["min"] = MIN_SCALE,
+            ["max"] = 2,
+            ["step"] = 0.05,
+            ["decimals"] = 2,
+            ["func"] = function(value)
+                UnitFrameUtils:SV(UnitFrameUtilsDB, "COMPANIONSCALE", value)
+                UnitFrameUtils:SetCompanionScale(value)
+            end
+        })
+    end
+
+    if HasMythicPlus() then
+        settings:AddCategory({
+            ["label"] = "LID_MYTHICRATING",
+            ["key"] = "MYTHICRATING"
+        })
+
+        AddToggle("LID_SHOWMYTHICRATING", "SHOWMYTHICRATING")
+        AddToggle("LID_HIDEINCOMBAT", "RATINGHIDECOMBAT")
+        AddToggle("LID_HIDEININSTANCE", "RATINGHIDEINSTANCE")
+        AddToggle("LID_HIDEINRAID", "RATINGHIDERAID")
+    end
+
     settings:AddCategory({
         ["label"] = "LID_ITEMLEVEL",
         ["key"] = "ITEMLEVEL"
@@ -252,6 +343,8 @@ function UnitFrameUtils:InitSettings()
         AddScaleSlider("LID_FLAGSCALE", "FLAGSCALERAID", "RAID")
         AddOffsetSlider("LID_FLAGOFFSET", "FLAGOFFSETRAID")
     end
+
+    settings:UpdateDependencies()
 end
 
 local loader = CreateFrame("Frame", "UnitFrameUtilsSettingsLoader")

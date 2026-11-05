@@ -38,7 +38,11 @@ local options = {
     ["SHOWRAIDICON"] = true,
     ["RAIDICONHIDECOMBAT"] = false,
     ["SHOWCOMPANION"] = true,
-    ["SHOWCOMPANIONNOTFULL"] = false
+    ["SHOWCOMPANIONNOTFULL"] = false,
+    ["SHOWHOTPREDICTION"] = true,
+    ["SHOWHOTPREDICTIONPRD"] = true,
+    ["SHOWHOTPREDICTIONUNIT"] = true,
+    ["HOTCUSTOMCOLOR"] = false
 }
 
 local overlays = {}
@@ -501,12 +505,17 @@ function UnitFrameUtils:SetOption(key, value)
 
     if UnitFrameUtils.ApplyCompanionOptions then UnitFrameUtils:ApplyCompanionOptions() end
     if UnitFrameUtils.UpdateCompanion then UnitFrameUtils:UpdateCompanion() end
+    if UnitFrameUtils.UpdateHotPrediction then UnitFrameUtils:UpdateHotPrediction() end
 end
 
 function UnitFrameUtils:GetOption(key)
     if key == nil then return nil end
 
     return options[key]
+end
+
+function UnitFrameUtils:GetRaidOverlayFrames()
+    return overlays
 end
 
 local TAINT_FIELDS = {"unit", "displayedUnit", "menu", "healthBar", "powerBar", "name", "optionTable"}

@@ -47,4 +47,5 @@ locale\zhTW.lua
 
 Core.lua
 Companion.lua
+HotPrediction.lua
 Settings.lua
