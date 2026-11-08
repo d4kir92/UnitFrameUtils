@@ -8,6 +8,10 @@ local HOT = {
     ["SENT_QUEUE"] = 8,
     ["VALIDATE_DELAY"] = 1,
     ["MISSING_GRACE"] = 0.6,
+    ["VERIFY_WINDOW"] = 1.5,
+    ["FRESH_TOLERANCE"] = 1,
+    ["AURA_RECENT"] = 0.5,
+    ["INSTANT_CONFIRM"] = 2,
     ["MIN_RATIO"] = 0.85,
     ["MAX_RATIO"] = 3,
     ["SPAN_TEXTURE"] = "Interface\\Buttons\\WHITE8X8",
@@ -69,6 +73,10 @@ local HOT = {
 local sentTargets = {}
 local sentQueue = {}
 local hotsByKey = {}
+local pendingChecks = {}
+local recentAuraUnits = {}
+local recentHeals = {}
+local instantSeen = {}
 local learnedTicks = {}
 local displays = {}
 local combatSeen = {}
@@ -290,6 +298,18 @@ local function Housekeep(now)
         tremove(sentQueue, 1)
     end
 
+    for i = #pendingChecks, 1, -1 do
+        if now - pendingChecks[i].at > HOT.VERIFY_WINDOW then tremove(pendingChecks, i) end
+    end
+
+    for key, heal in pairs(recentHeals) do
+        if now - heal.at > HOT.VERIFY_WINDOW then recentHeals[key] = nil end
+    end
+
+    for unit, at in pairs(recentAuraUnits) do
+        if now - at > HOT.AURA_RECENT then recentAuraUnits[unit] = nil end
+    end
+
     for key, hots in pairs(hotsByKey) do
         for name, hot in pairs(hots) do
             while hot.nextTickAt < now - HOT.WINDOW and hot.nextTickAt <= hot.expiresAt do
@@ -324,7 +344,10 @@ local function OnCastSent(targetName, castGUID, spellID)
         tremove(sentQueue, 1)
     end
 
-    if castGUID and not IsSecret(castGUID) then sentTargets[castGUID] = entry end
+    if castGUID and not IsSecret(castGUID) then
+        entry.guid = castGUID
+        sentTargets[castGUID] = entry
+    end
     if debugMode then Debug("sent " .. Describe(spellID) .. " target=" .. Describe(targetName) .. " guid=" .. Describe(castGUID) .. " key=" .. tostring(entry.key)) end
 end
 
@@ -339,6 +362,104 @@ local function TakeQueuedSent(spellID, now)
     end
 
     return nil
+end
+
+local function DropSent(castGUID)
+    if castGUID == nil or IsSecret(castGUID) then return end
+    local entry = sentTargets[castGUID]
+    sentTargets[castGUID] = nil
+    for i = #sentQueue, 1, -1 do
+        if sentQueue[i] == entry or sentQueue[i].guid == castGUID then tremove(sentQueue, i) end
+    end
+end
+
+local function ShiftToInstant(hot, amount)
+    if hot.instant then return end
+    hot.instant = true
+    hot.anchor = hot.appliedAt - hot.interval
+    hot.expiresAt = hot.anchor + hot.totalTicks * hot.interval
+    hot.lastTickIndex = math.max(hot.lastTickIndex, 1)
+    hot.nextTickAt = hot.anchor + (hot.lastTickIndex + 1) * hot.interval
+    if amount then
+        hot.tickSum = hot.tickSum + amount
+        hot.tickCount = hot.tickCount + 1
+        learnedTicks[hot.spellID] = hot.tickSum / hot.tickCount
+        instantSeen[hot.name] = (instantSeen[hot.name] or 0) + 1
+    end
+
+    Debug(string.format("instant tick %s %s (seen %d)", hot.name, tostring(amount), instantSeen[hot.name] or 0))
+end
+
+local function MatchesInstantHeal(hot, heal)
+    return heal ~= nil and heal.amount ~= nil and not heal.crit and math.abs(heal.at - hot.appliedAt) <= HOT.WINDOW and IsPlausibleTick(hot, heal.amount)
+end
+
+local function ApplyKnownInstant(key, hot)
+    local heal = recentHeals[key]
+    if MatchesInstantHeal(hot, heal) then
+        recentHeals[key] = nil
+        ShiftToInstant(hot, heal.amount)
+    elseif (instantSeen[hot.name] or 0) >= HOT.INSTANT_CONFIRM then
+        ShiftToInstant(hot, nil)
+    end
+end
+
+local function AuraAppliedOffset(unit, hot)
+    if C_UnitAuras == nil or C_UnitAuras.GetAuraDataBySpellName == nil then return nil end
+    local ok, aura = pcall(C_UnitAuras.GetAuraDataBySpellName, unit, hot.name, "HELPFUL|PLAYER")
+    if not ok or IsSecret(aura) or type(aura) ~= "table" then return nil end
+    local expires, duration = SafeNumber(aura.expirationTime), SafeNumber(aura.duration)
+    if expires == nil or duration == nil or duration <= 0 then return nil end
+    local offset = math.abs(expires - duration - hot.appliedAt)
+    if offset > HOT.FRESH_TOLERANCE then return nil end
+
+    return offset
+end
+
+local function Rehome(check, unit)
+    local newKey = UnitKey(unit)
+    if newKey == nil or newKey == check.key then return end
+    local hot = check.hot
+    local old = hotsByKey[check.key]
+    if old and old[hot.name] == hot then
+        old[hot.name] = nil
+        if next(old) == nil then hotsByKey[check.key] = nil end
+    end
+
+    hotsByKey[newKey] = hotsByKey[newKey] or {}
+    hotsByKey[newKey][hot.name] = hot
+    Debug("moved " .. hot.name .. " from " .. tostring(check.key) .. " to " .. newKey .. " (" .. unit .. ")")
+    check.key = newKey
+    if hot.lastTickIndex == 0 then ApplyKnownInstant(newKey, hot) end
+end
+
+local function VerifyRecipient(unit, now)
+    local bestIndex, bestOffset = nil, nil
+    for i = #pendingChecks, 1, -1 do
+        local check = pendingChecks[i]
+        if now - check.at <= HOT.VERIFY_WINDOW then
+            local offset = AuraAppliedOffset(unit, check.hot)
+            if offset and (bestOffset == nil or offset < bestOffset) then bestIndex, bestOffset = i, offset end
+        end
+    end
+
+    if bestIndex == nil then return end
+    local check = tremove(pendingChecks, bestIndex)
+    Rehome(check, unit)
+end
+
+local function IsTrackedAuraUnit(unit)
+    if type(unit) ~= "string" or IsSecret(unit) then return false end
+    if unit == "player" or unit == "target" or unit == "focus" or unit == "mouseover" then return true end
+
+    return string.find(unit, "^party%d$") ~= nil or string.find(unit, "^raid%d+$") ~= nil
+end
+
+local function OnUnitAura(unit)
+    if not IsTrackedAuraUnit(unit) then return end
+    local now = GetTime()
+    recentAuraUnits[unit] = now
+    if pendingChecks[1] then VerifyRecipient(unit, now) end
 end
 
 local function OnCastSucceeded(castGUID, spellID)
@@ -388,20 +509,38 @@ local function OnCastSucceeded(castGUID, spellID)
 
         return
     end
-    local hot = NewHot(spellID, name, total, duration, interval, GetTime())
+    local now = GetTime()
+    local hot = NewHot(spellID, name, total, duration, interval, now)
     hotsByKey[key] = hotsByKey[key] or {}
     hotsByKey[key][name] = hot
     Debug(string.format("cast %s (%d) on %s: %d over %ss, %d ticks, tick %.1f", name, spellID, key, total, duration, hot.totalTicks, ExpectedTick(hot)))
+    ApplyKnownInstant(key, hot)
+    tinsert(pendingChecks, {
+        ["hot"] = hot,
+        ["key"] = key,
+        ["at"] = now
+    })
+
+    for unit, at in pairs(recentAuraUnits) do
+        if now - at <= HOT.AURA_RECENT then VerifyRecipient(unit, now) end
+    end
 end
 
 local function OnUnitCombat(unit, action, flag, amount)
     if IsSecret(action) or action ~= "HEAL" then return end
     local isCrit = not IsSecret(flag) and flag == "CRITICAL"
     local key = UnitKey(unit)
-    local hots = key and hotsByKey[key]
-    if hots == nil then return end
+    if key == nil then return end
     local now = GetTime()
     amount = SafeNumber(amount)
+    recentHeals[key] = {
+        ["at"] = now,
+        ["amount"] = amount,
+        ["crit"] = isCrit
+    }
+
+    local hots = hotsByKey[key]
+    if hots == nil then return end
     if combatSeenAt ~= now then
         wipe(combatSeen)
         combatSeenAt = now
@@ -410,6 +549,15 @@ local function OnUnitCombat(unit, action, flag, amount)
     local signature = key .. ":" .. tostring(amount)
     if combatSeen[signature] and combatSeen[signature] ~= unit then return end
     combatSeen[signature] = unit
+    for _, hot in pairs(hots) do
+        if not hot.instant and hot.lastTickIndex == 0 and MatchesInstantHeal(hot, recentHeals[key]) then
+            recentHeals[key] = nil
+            ShiftToInstant(hot, amount)
+
+            return
+        end
+    end
+
     local best, bestIndex, bestDistance = nil, nil, nil
     for _, hot in pairs(hots) do
         local index = math.max(1, math.floor((now - hot.anchor) / hot.interval + 0.5))
@@ -772,7 +920,11 @@ end
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_SENT", "player")
 eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
+eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
+eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED_QUIET", "player")
+eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "player")
 eventFrame:RegisterEvent("UNIT_COMBAT")
+eventFrame:RegisterEvent("UNIT_AURA")
 eventFrame:SetScript(
     "OnEvent",
     function(sel, event, ...)
@@ -786,6 +938,11 @@ eventFrame:SetScript(
         elseif event == "UNIT_COMBAT" then
             local unit, action, flag, amount = ...
             OnUnitCombat(unit, action, flag, amount)
+        elseif event == "UNIT_AURA" then
+            OnUnitAura(...)
+        else
+            local _, castGUID = ...
+            DropSent(castGUID)
         end
     end
 )
