@@ -16,7 +16,54 @@ local HOT = {
     ["TEXTURE_SEGMENTS"] = {"myHealPrediction", "otherHealPrediction"},
     ["PRD_TEXTURE"] = "Interface\\TargetingFrame\\UI-TargetingFrame-BarFill",
     ["PRD_COLOR"] = {0, 0.659, 0.608},
-    ["RAID_COLOR"] = {11 / 255, 136 / 255, 105 / 255, 1}
+    ["RAID_COLOR"] = {11 / 255, 136 / 255, 105 / 255, 1},
+    ["LOCALES"] = {
+        ["enUS"] = {
+            ["heal"] = {"^Heals"},
+            ["duration"] = {"(%d+%.?%d*) sec"},
+            ["interval"] = "every (%d+%.?%d*) sec"
+        },
+        ["deDE"] = {
+            ["heal"] = {"^Heilt"},
+            ["duration"] = {"(%d+[,%.]?%d*) Sek"},
+            ["amountAfter"] = true
+        },
+        ["frFR"] = {
+            ["heal"] = {"^Rend %d+ points de vie", "^Soigne"},
+            ["duration"] = {"(%d+) sec"}
+        },
+        ["esES"] = {
+            ["heal"] = {"^Cura", "^Sana"},
+            ["duration"] = {"(%d+) s%.", "(%d+) seg"}
+        },
+        ["esMX"] = {
+            ["heal"] = {"^Cura", "^Sana"},
+            ["duration"] = {"(%d+) s%.", "(%d+) seg"}
+        },
+        ["ptBR"] = {
+            ["heal"] = {"^Cura"},
+            ["duration"] = {"(%d+) s%.", "(%d+) seg"}
+        },
+        ["ruRU"] = {
+            ["heal"] = {"^Излечение", "^Исцеление"},
+            ["duration"] = {"(%d+) сек"}
+        },
+        ["koKR"] = {
+            ["heal"] = {"생명력"},
+            ["duration"] = {"(%d+)초"},
+            ["amountAfter"] = true
+        },
+        ["zhCN"] = {
+            ["heal"] = {"^治疗"},
+            ["duration"] = {"(%d+)秒"},
+            ["amountAfter"] = true
+        },
+        ["zhTW"] = {
+            ["heal"] = {"^治療"},
+            ["duration"] = {"(%d+)秒"},
+            ["amountAfter"] = true
+        }
+    }
 }
 
 local sentTargets = {}
@@ -137,20 +184,61 @@ local function GetSpellNameAndDescription(spellID)
     return SafeString(name), SafeString(desc)
 end
 
-local function ParseHot(desc)
-    if desc == nil then return nil end
-    if not string.find(desc, "^Heals") then return nil end
-    local total, duration
-    for amount, secs in string.gmatch(desc, "([%d,]+)[^%d%.]-over (%d+%.?%d*) sec") do
-        local digits = string.gsub(amount, ",", "")
-        total, duration = tonumber(digits), tonumber(secs)
+local function StripThousands(text)
+    local result = text
+    for _ = 1, 3 do
+        result = string.gsub(result, "(%d)[%.,\194\160 ](%d%d%d)%f[%D]", "%1%2")
     end
 
+    return result
+end
+
+local function HasMarker(desc, rules)
+    for _, marker in ipairs(rules.heal) do
+        if string.find(desc, marker) then return true end
+    end
+
+    return false
+end
+
+local function ParseHotWith(desc, rules)
+    if not HasMarker(desc, rules) then return nil end
+    local text = StripThousands(desc)
+    local found, foundEnd, secs = nil, nil, nil
+    for _, pattern in ipairs(rules.duration) do
+        local s, e, value = string.find(text, pattern)
+        if s and (found == nil or s > found) then found, foundEnd, secs = s, e, value end
+    end
+
+    if found == nil then return nil end
+    local amount = nil
+    if rules.amountAfter then
+        amount = string.match(string.sub(text, foundEnd + 1), "(%d+)")
+    else
+        for value in string.gmatch(string.sub(text, 1, found - 1), "(%d+)") do
+            amount = value
+        end
+    end
+
+    local total = tonumber(amount)
+    local secsText = string.gsub(secs, ",", ".")
+    local duration = tonumber(secsText)
     if total == nil or duration == nil or total <= 0 or duration <= 0 then return nil end
-    local interval = tonumber(string.match(desc, "every (%d+%.?%d*) sec")) or HOT.INTERVAL
-    if interval <= 0 then interval = HOT.INTERVAL end
+    local interval = rules.interval and tonumber(string.match(text, rules.interval)) or HOT.INTERVAL
+    if interval == nil or interval <= 0 then interval = HOT.INTERVAL end
 
     return total, duration, interval
+end
+
+local function ParseHot(desc)
+    if desc == nil then return nil end
+    local rules = HOT.LOCALES[GetLocale and GetLocale() or "enUS"]
+    if rules then
+        local total, duration, interval = ParseHotWith(desc, rules)
+        if total then return total, duration, interval end
+    end
+
+    return ParseHotWith(desc, HOT.LOCALES.enUS)
 end
 
 local function NewHot(spellID, name, total, duration, interval, now)
