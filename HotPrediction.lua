@@ -5,7 +5,9 @@ local HOT = {
     ["INTERVAL"] = 3,
     ["WINDOW"] = 0.45,
     ["SENT_TTL"] = 5,
+    ["SENT_QUEUE"] = 8,
     ["VALIDATE_DELAY"] = 1,
+    ["MISSING_GRACE"] = 0.6,
     ["MIN_RATIO"] = 0.85,
     ["MAX_RATIO"] = 3,
     ["SPAN_TEXTURE"] = "Interface\\Buttons\\WHITE8X8",
@@ -18,6 +20,7 @@ local HOT = {
 }
 
 local sentTargets = {}
+local sentQueue = {}
 local hotsByKey = {}
 local learnedTicks = {}
 local displays = {}
@@ -103,6 +106,7 @@ local function CanAssist(unit)
 end
 
 local function GuessTargetKey()
+    if CanAssist("mouseover") then return UnitKey("mouseover") end
     if CanAssist("target") then return UnitKey("target") end
 
     return UnitKey("player")
@@ -194,6 +198,10 @@ local function Housekeep(now)
         if now - sent.at > HOT.SENT_TTL then sentTargets[guid] = nil end
     end
 
+    while sentQueue[1] and now - sentQueue[1].at > HOT.SENT_TTL do
+        tremove(sentQueue, 1)
+    end
+
     for key, hots in pairs(hotsByKey) do
         for name, hot in pairs(hots) do
             while hot.nextTickAt < now - HOT.WINDOW and hot.nextTickAt <= hot.expiresAt do
@@ -217,19 +225,32 @@ local function Describe(value)
 end
 
 local function OnCastSent(targetName, castGUID, spellID)
-    if castGUID == nil or IsSecret(castGUID) then
-        Debug("sent " .. Describe(spellID) .. ": castGUID " .. Describe(castGUID))
-
-        return
-    end
-
-    local key = ResolveTargetKey(targetName)
-    sentTargets[castGUID] = {
-        ["key"] = key,
+    local entry = {
+        ["key"] = ResolveTargetKey(targetName),
+        ["spellID"] = SafeNumber(spellID),
         ["at"] = GetTime()
     }
 
-    if debugMode then Debug("sent " .. Describe(spellID) .. " target=" .. Describe(targetName) .. " key=" .. tostring(key)) end
+    tinsert(sentQueue, entry)
+    while #sentQueue > HOT.SENT_QUEUE do
+        tremove(sentQueue, 1)
+    end
+
+    if castGUID and not IsSecret(castGUID) then sentTargets[castGUID] = entry end
+    if debugMode then Debug("sent " .. Describe(spellID) .. " target=" .. Describe(targetName) .. " guid=" .. Describe(castGUID) .. " key=" .. tostring(entry.key)) end
+end
+
+local function TakeQueuedSent(spellID, now)
+    for i = #sentQueue, 1, -1 do
+        local entry = sentQueue[i]
+        if now - entry.at <= HOT.SENT_TTL and (entry.spellID == nil or entry.spellID == spellID) then
+            tremove(sentQueue, i)
+
+            return entry
+        end
+    end
+
+    return nil
 end
 
 local function OnCastSucceeded(castGUID, spellID)
@@ -243,6 +264,14 @@ local function OnCastSucceeded(castGUID, spellID)
     if castGUID and not IsSecret(castGUID) then
         sent = sentTargets[castGUID]
         sentTargets[castGUID] = nil
+    end
+
+    if sent then
+        for i = #sentQueue, 1, -1 do
+            if sentQueue[i] == sent then tremove(sentQueue, i) end
+        end
+    else
+        sent = TakeQueuedSent(spellID, GetTime())
     end
 
     local ok, name, desc = pcall(GetSpellNameAndDescription, spellID)
@@ -331,7 +360,13 @@ local function ValidateHot(unit, hot, now)
     if C_UnitAuras == nil or C_UnitAuras.GetAuraDataBySpellName == nil then return true end
     local ok, aura = pcall(C_UnitAuras.GetAuraDataBySpellName, unit, hot.name, "HELPFUL|PLAYER")
     if not ok or IsSecret(aura) then return true end
-    if aura == nil then return false end
+    if aura == nil then
+        hot.missingSince = hot.missingSince or now
+
+        return now - hot.missingSince < HOT.MISSING_GRACE
+    end
+
+    hot.missingSince = nil
     if type(aura) ~= "table" or hot.lastTickIndex > 0 then return true end
     local expires = SafeNumber(aura.expirationTime)
     if expires == nil or expires <= 0 or math.abs(expires - hot.expiresAt) < 0.3 then return true end
