@@ -452,13 +452,16 @@ local function AddOverlay(frame)
 end
 
 local function ScanFrames()
-    for i = 1, 40 do
-        AddOverlay(_G["CompactRaidFrame" .. i])
+    local raidFrameIndex = 1
+    while _G["CompactRaidFrame" .. raidFrameIndex] do
+        AddOverlay(_G["CompactRaidFrame" .. raidFrameIndex])
+        raidFrameIndex = raidFrameIndex + 1
+    end
+
+    for i = 1, 8 do
         if i <= 5 then AddOverlay(_G["CompactPartyFrameMember" .. i]) end
-        if i <= 8 then
-            for x = 1, 5 do
-                AddOverlay(_G["CompactRaidGroup" .. i .. "Member" .. x])
-            end
+        for x = 1, 5 do
+            AddOverlay(_G["CompactRaidGroup" .. i .. "Member" .. x])
         end
     end
 end
@@ -641,6 +644,7 @@ end
 local eventFrame = CreateFrame("Frame")
 UnitFrameUtils:RegisterEvent(eventFrame, "PLAYER_ENTERING_WORLD")
 UnitFrameUtils:RegisterEvent(eventFrame, "GROUP_ROSTER_UPDATE")
+UnitFrameUtils:RegisterEvent(eventFrame, "PLAYER_ROLES_ASSIGNED")
 UnitFrameUtils:RegisterEvent(eventFrame, "PARTY_LEADER_CHANGED")
 UnitFrameUtils:RegisterEvent(eventFrame, "RAID_TARGET_UPDATE")
 UnitFrameUtils:RegisterEvent(eventFrame, "PLAYER_REGEN_ENABLED")
