@@ -9,9 +9,12 @@ local HOT = {
     ["VALIDATE_DELAY"] = 1,
     ["MISSING_GRACE"] = 0.6,
     ["VERIFY_WINDOW"] = 1.5,
-    ["FRESH_TOLERANCE"] = 1,
+    ["FRESH_TOLERANCE"] = 0.4,
     ["AURA_RECENT"] = 0.5,
-    ["INSTANT_CONFIRM"] = 2,
+    ["INSTANT_WINDOW"] = 0.3,
+    ["INSTANT_DECAY"] = 0.85,
+    ["INSTANT_MIN_CASTS"] = 1.8,
+    ["INSTANT_RATIO"] = 0.75,
     ["MIN_RATIO"] = 0.85,
     ["MAX_RATIO"] = 3,
     ["SPAN_TEXTURE"] = "Interface\\Buttons\\WHITE8X8",
@@ -76,7 +79,7 @@ local hotsByKey = {}
 local pendingChecks = {}
 local recentAuraUnits = {}
 local recentHeals = {}
-local instantSeen = {}
+local instantStats = {}
 local learnedTicks = {}
 local displays = {}
 local combatSeen = {}
@@ -84,7 +87,7 @@ local combatSeenAt = nil
 local debugMode = false
 local colorDebug = false
 local hotColor = {11 / 255, 136 / 255, 105 / 255, 1}
-local candidates = {"player", "target", "mouseover", "focus"}
+local candidates = {"mouseover", "target", "player", "focus"}
 for i = 1, 4 do
     tinsert(candidates, "party" .. i)
 end
@@ -137,20 +140,26 @@ local function GetUnitNames(unit)
     return names
 end
 
-local function NameMatches(unit, name)
+local function NameMatches(unit, name, loose)
     local lowerName = string.lower(name)
+    local shortName = string.lower(string.match(name, "^[^%-]+") or name)
     for _, unitName in ipairs(GetUnitNames(unit)) do
         local lowerUnit = string.lower(unitName)
-        if lowerUnit == lowerName or lowerUnit == string.lower(string.match(name, "^[^%-]+") or name) then return true end
-        if string.sub(lowerName, 1, #lowerUnit + 1) == lowerUnit .. " " then return true end
+        if loose then
+            if string.sub(lowerName, 1, #lowerUnit + 1) == lowerUnit .. " " then return true end
+        elseif lowerUnit == lowerName or lowerUnit == shortName then
+            return true
+        end
     end
 
     return false
 end
 
 local function FindUnitByName(name)
-    for _, unit in ipairs(candidates) do
-        if UnitFrameUtils:UnitExists(unit) and NameMatches(unit, name) then return unit end
+    for pass = 1, 2 do
+        for _, unit in ipairs(candidates) do
+            if UnitFrameUtils:UnitExists(unit) and NameMatches(unit, name, pass == 2) then return unit end
+        end
     end
 
     return nil
@@ -289,6 +298,29 @@ local function IsPlausibleTick(hot, amount)
     return amount <= ExpectedTick(hot) * HOT.MAX_RATIO
 end
 
+function HOT.IsLearnedInstant(name)
+    local stats = instantStats[name]
+
+    return stats ~= nil and stats.casts >= HOT.INSTANT_MIN_CASTS and stats.hits / stats.casts >= HOT.INSTANT_RATIO
+end
+
+function HOT.RecordInstant(hot, hit)
+    if hot.instantRecorded then return end
+    hot.instantRecorded = true
+    local stats = instantStats[hot.name]
+    if stats == nil then
+        stats = {
+            ["casts"] = 0,
+            ["hits"] = 0
+        }
+
+        instantStats[hot.name] = stats
+    end
+
+    stats.casts = stats.casts * HOT.INSTANT_DECAY + 1
+    stats.hits = stats.hits * HOT.INSTANT_DECAY + (hit and 1 or 0)
+end
+
 local function Housekeep(now)
     for guid, sent in pairs(sentTargets) do
         if now - sent.at > HOT.SENT_TTL then sentTargets[guid] = nil end
@@ -312,6 +344,7 @@ local function Housekeep(now)
 
     for key, hots in pairs(hotsByKey) do
         for name, hot in pairs(hots) do
+            if not hot.instantRecorded and now - hot.appliedAt > HOT.INSTANT_WINDOW + HOT.UPDATE then HOT.RecordInstant(hot, false) end
             while hot.nextTickAt < now - HOT.WINDOW and hot.nextTickAt <= hot.expiresAt do
                 hot.nextTickAt = hot.nextTickAt + hot.interval
             end
@@ -384,22 +417,34 @@ local function ShiftToInstant(hot, amount)
         hot.tickSum = hot.tickSum + amount
         hot.tickCount = hot.tickCount + 1
         learnedTicks[hot.spellID] = hot.tickSum / hot.tickCount
-        instantSeen[hot.name] = (instantSeen[hot.name] or 0) + 1
     end
 
-    Debug(string.format("instant tick %s %s (seen %d)", hot.name, tostring(amount), instantSeen[hot.name] or 0))
+    Debug(string.format("instant tick %s %s", hot.name, tostring(amount)))
 end
 
 local function MatchesInstantHeal(hot, heal)
-    return heal ~= nil and heal.amount ~= nil and not heal.crit and math.abs(heal.at - hot.appliedAt) <= HOT.WINDOW and IsPlausibleTick(hot, heal.amount)
+    return heal ~= nil and heal.amount ~= nil and math.abs(heal.at - hot.appliedAt) <= HOT.INSTANT_WINDOW and IsPlausibleTick(hot, heal.amount)
+end
+
+local function ObserveInstant(hot, heal)
+    HOT.RecordInstant(hot, true)
+    local amount = nil
+    if not heal.crit then amount = heal.amount end
+    if not hot.instant then
+        if HOT.IsLearnedInstant(hot.name) then ShiftToInstant(hot, amount) end
+    elseif amount then
+        hot.tickSum = hot.tickSum + amount
+        hot.tickCount = hot.tickCount + 1
+        learnedTicks[hot.spellID] = hot.tickSum / hot.tickCount
+    end
 end
 
 local function ApplyKnownInstant(key, hot)
     local heal = recentHeals[key]
-    if MatchesInstantHeal(hot, heal) then
+    if not hot.instantRecorded and MatchesInstantHeal(hot, heal) then
         recentHeals[key] = nil
-        ShiftToInstant(hot, heal.amount)
-    elseif (instantSeen[hot.name] or 0) >= HOT.INSTANT_CONFIRM then
+        ObserveInstant(hot, heal)
+    elseif not hot.instant and HOT.IsLearnedInstant(hot.name) then
         ShiftToInstant(hot, nil)
     end
 end
@@ -430,7 +475,7 @@ local function Rehome(check, unit)
     hotsByKey[newKey][hot.name] = hot
     Debug("moved " .. hot.name .. " from " .. tostring(check.key) .. " to " .. newKey .. " (" .. unit .. ")")
     check.key = newKey
-    if hot.lastTickIndex == 0 then ApplyKnownInstant(newKey, hot) end
+    if not hot.instantRecorded then ApplyKnownInstant(newKey, hot) end
 end
 
 local function VerifyRecipient(unit, now)
@@ -550,11 +595,14 @@ local function OnUnitCombat(unit, action, flag, amount)
     if combatSeen[signature] and combatSeen[signature] ~= unit then return end
     combatSeen[signature] = unit
     for _, hot in pairs(hots) do
-        if not hot.instant and hot.lastTickIndex == 0 and MatchesInstantHeal(hot, recentHeals[key]) then
-            recentHeals[key] = nil
-            ShiftToInstant(hot, amount)
+        if not hot.instantRecorded and MatchesInstantHeal(hot, recentHeals[key]) then
+            local heal = recentHeals[key]
+            ObserveInstant(hot, heal)
+            if hot.instant then
+                recentHeals[key] = nil
 
-            return
+                return
+            end
         end
     end
 
@@ -912,6 +960,10 @@ function UnitFrameUtils:ToggleHotDebug()
 
     for spellID, tick in pairs(learnedTicks) do
         UnitFrameUtils:MSG(string.format("learned %d: %.1f", spellID, tick))
+    end
+
+    for name, stats in pairs(instantStats) do
+        UnitFrameUtils:MSG(string.format("instant %s: %.1f of %.1f casts, learned %s", name, stats.hits, stats.casts, tostring(HOT.IsLearnedInstant(name))))
     end
 
     if count == 0 then UnitFrameUtils:MSG("no HoTs tracked") end
