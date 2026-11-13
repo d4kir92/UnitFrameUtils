@@ -24,6 +24,8 @@ local HOT = {
     ["PRD_TEXTURE"] = "Interface\\TargetingFrame\\UI-TargetingFrame-BarFill",
     ["PRD_COLOR"] = {0, 0.659, 0.608},
     ["RAID_COLOR"] = {11 / 255, 136 / 255, 105 / 255, 1},
+    ["REPORT_DELAY"] = 1,
+    ["report"] = false,
     ["LOCALES"] = {
         ["enUS"] = {
             ["heal"] = {"^Heals"},
@@ -104,6 +106,10 @@ local function Debug(msg)
     if debugMode then UnitFrameUtils:MSG("|cff55ff99HoT|r " .. msg) end
 end
 
+function HOT.Report(msg)
+    if HOT.report then UnitFrameUtils:MSG("|cffff4040HoT error|r " .. msg) end
+end
+
 local function SafeString(value)
     if value == nil or IsSecret(value) or type(value) ~= "string" or value == "" then return nil end
 
@@ -182,6 +188,7 @@ local function ResolveTargetKey(targetName)
         local unit = FindUnitByName(name)
         if unit then return UnitKey(unit) end
         if debugMode then UnitFrameUtils:MSG("|cff55ff99HoT|r name not matched: " .. name .. " | player names: " .. table.concat(GetUnitNames("player"), ", ")) end
+        HOT.Report("target name not found: " .. name .. " (guessing mouseover/target/player)")
     end
 
     return GuessTargetKey()
@@ -510,6 +517,7 @@ end
 local function OnCastSucceeded(castGUID, spellID)
     if spellID == nil or IsSecret(spellID) then
         Debug("cast: spellID " .. Describe(spellID))
+        HOT.Report("cast with unreadable spellID " .. Describe(spellID) .. ", HoT cannot be tracked")
 
         return
     end
@@ -531,6 +539,7 @@ local function OnCastSucceeded(castGUID, spellID)
     local ok, name, desc = pcall(GetSpellNameAndDescription, spellID)
     if not ok or name == nil then
         Debug("cast " .. spellID .. ": no name (" .. Describe(name) .. ")")
+        HOT.Report("cast " .. spellID .. ": spell name unreadable (" .. Describe(name) .. ")")
 
         return
     end
@@ -551,6 +560,7 @@ local function OnCastSucceeded(castGUID, spellID)
 
     if key == nil then
         Debug("cast " .. name .. ": target not found (sent=" .. tostring(sent ~= nil) .. ")")
+        HOT.Report(name .. ": no target assigned (sent=" .. tostring(sent ~= nil) .. ")")
 
         return
     end
@@ -676,6 +686,7 @@ local function GetUnitHots(unit, now, readable)
         if readable and not ValidateHot(unit, hot, now) then
             hots[name] = nil
             Debug("aura gone " .. name)
+            HOT.Report(name .. ": removed from " .. key .. " (" .. unit .. "), aura not found after " .. string.format("%.1f", now - hot.appliedAt) .. "s")
         else
             total = total + RemainingHeal(hot)
         end
@@ -847,14 +858,77 @@ local function ShowDisplay(spec, unit, total)
     )
 
     display.texture:SetShown(ok)
+
+    return ok
+end
+
+function HOT.MarkShown(spec, unit)
+    local key = UnitKey(unit)
+    local hots = key and hotsByKey[key]
+    if hots == nil then return end
+    for name, hot in pairs(hots) do
+        hot.shownOn = hot.shownOn or {}
+        if not hot.shownOn[spec.key] then
+            hot.shownOn[spec.key] = true
+            local display = displays[spec.bar]
+            local okHp, hp = pcall(UnitHealth, unit)
+            local okMax, maxHp = pcall(UnitHealthMax, unit)
+            local okW, width = pcall(spec.bar.GetWidth, spec.bar)
+            local start = display and display.start
+            local startName = "fill"
+            if start and start ~= display.fill then startName = "prediction segment" end
+            UnitFrameUtils:MSG(string.format("|cff55ff99HoT|r shown %s on %s (%s): %.0f, health %s/%s, bar width %s, starts at %s, texture shown %s", name, HOT.Label(spec), unit, RemainingHeal(hot), okHp and Describe(hp) or "?", okMax and Describe(maxHp) or "?", okW and Describe(width) or "?", startName, display and tostring(display.texture:IsShown()) or "?"))
+        end
+
+        hot.shown = true
+    end
+
+    if spec.failed then
+        spec.failed = nil
+        HOT.Report("frame " .. HOT.Label(spec) .. " works again")
+    end
+end
+
+function HOT.CheckShown(now)
+    if not HOT.report and not debugMode then return end
+    for key, hots in pairs(hotsByKey) do
+        for name, hot in pairs(hots) do
+            if not hot.shown and not hot.reported and now - hot.appliedAt > HOT.REPORT_DELAY then
+                hot.reported = true
+                UnitFrameUtils:MSG("|cffff4040HoT error|r " .. name .. " on " .. key .. ": not shown on any frame. Frames checked: " .. table.concat(HOT.hosts, ", "))
+            end
+        end
+    end
+end
+
+function HOT.Label(spec)
+    local key = spec.key
+    if type(key) == "table" and key.GetName then
+        local ok, name = pcall(key.GetName, key)
+        if ok and SafeString(name) then return name end
+    end
+
+    return tostring(key)
+end
+
+function HOT.TrackHost(spec, unit, enabled)
+    local state = "off"
+    if enabled then state = tostring(UnitKey(unit) or "no key") end
+    tinsert(HOT.hosts, HOT.Label(spec) .. "=" .. Describe(unit) .. " [" .. state .. "]")
 end
 
 local function UpdateHost(spec, unit, enabled, now, readable)
     if spec == nil or spec.bar == nil then return end
+    if HOT.report or debugMode then HOT.TrackHost(spec, unit, enabled) end
     local total = 0
     if enabled and SafeString(unit) and UnitFrameUtils:UnitExists(unit) then total = GetUnitHots(unit, now, readable) end
     if total > 0 then
-        ShowDisplay(spec, unit, total)
+        if ShowDisplay(spec, unit, total) then
+            if HOT.report or debugMode then HOT.MarkShown(spec, unit) end
+        elseif HOT.report and not spec.failed then
+            spec.failed = true
+            HOT.Report("frame " .. HOT.Label(spec) .. " (" .. tostring(unit) .. "): could not draw " .. string.format("%.0f", total))
+        end
     else
         HideDisplay(spec)
     end
@@ -866,6 +940,7 @@ local function GetSpec(key, bar, parent, style, layer, sublevel, mask)
     local spec = specs[key]
     if spec and spec.bar == bar then return spec end
     spec = {
+        ["key"] = key,
         ["bar"] = bar,
         ["parent"] = parent,
         ["style"] = style,
@@ -911,6 +986,7 @@ end
 
 local function UpdateDisplays()
     local now = GetTime()
+    HOT.hosts = {}
     local readable = AurasReadable()
     local raidEnabled = UnitFrameUtils:GetOption("SHOWHOTPREDICTION") == true
     local frames = UnitFrameUtils.GetRaidOverlayFrames and UnitFrameUtils:GetRaidOverlayFrames()
@@ -928,6 +1004,7 @@ local function UpdateDisplays()
     local unitEnabled = UnitFrameUtils:GetOption("SHOWHOTPREDICTIONUNIT") == true
     UpdateHost(GetUnitFrameSpec("PLAYER", _G["PlayerFrame"], "PlayerFrameContent"), "player", unitEnabled, now, readable)
     UpdateHost(GetUnitFrameSpec("TARGET", _G["TargetFrame"], "TargetFrameContent"), "target", unitEnabled and IsGroupUnit("target"), now, readable)
+    HOT.CheckShown(now)
 end
 
 function UnitFrameUtils:UpdateHotPrediction()
@@ -942,9 +1019,10 @@ end
 
 function UnitFrameUtils:ToggleHotColorDebug()
     colorDebug = not colorDebug
+    HOT.report = colorDebug
     RestyleAll()
 
-    UnitFrameUtils:MSG("HoT prediction debug color (blue): " .. tostring(colorDebug))
+    UnitFrameUtils:MSG("HoT prediction debug color (blue) + error report: " .. tostring(colorDebug))
 end
 
 function UnitFrameUtils:ToggleHotDebug()
