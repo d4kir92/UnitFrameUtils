@@ -825,6 +825,12 @@ end
 
 local function SetStart(display, region)
     if display.start == region then return end
+    if debugMode and display.start then
+        local where = "fill"
+        if region ~= display.fill then where = "prediction segment" end
+        UnitFrameUtils:MSG("|cff55ff99HoT|r " .. HOT.Label(display.spec) .. " now starts at " .. where)
+    end
+
     display.start = region
     local span = display.span
     span:ClearAllPoints()
@@ -893,9 +899,13 @@ function HOT.CheckShown(now)
     if not HOT.report and not debugMode then return end
     for key, hots in pairs(hotsByKey) do
         for name, hot in pairs(hots) do
-            if not hot.shown and not hot.reported and now - hot.appliedAt > HOT.REPORT_DELAY then
+            if not hot.reported and now - hot.appliedAt > HOT.REPORT_DELAY then
                 hot.reported = true
-                UnitFrameUtils:MSG("|cffff4040HoT error|r " .. name .. " on " .. key .. ": not shown on any frame. Frames checked: " .. table.concat(HOT.hosts, ", "))
+                if hot.shown then
+                    UnitFrameUtils:MSG("|cff55ff99HoT|r " .. name .. " on " .. key .. ", frames checked: " .. table.concat(HOT.hosts, ", "))
+                else
+                    UnitFrameUtils:MSG("|cffff4040HoT error|r " .. name .. " on " .. key .. ": not shown on any frame. Frames checked: " .. table.concat(HOT.hosts, ", "))
+                end
             end
         end
     end
